@@ -1,7 +1,6 @@
 package tarantulas
 
 import (
-	"fmt"
 	"github.com/valyala/fasthttp"
 )
 
@@ -12,11 +11,11 @@ type Result struct {
 	Headers map[string]interface{}
 }
 
-func GetContents(domain string, subdomains []string, thread int, httpPorts, httpsPorts []int) {
-	isListening(subdomains[0])
+func GetContents(domain string, subdomains []string, thread int, httpPorts, httpsPorts []int) string {
+	return isListening(subdomains[0])
 }
 
-func isListening(url string) bool {
+func isListening(url string) string {
 
 	req := fasthttp.AcquireRequest()
 	resp := fasthttp.AcquireResponse()
@@ -28,8 +27,6 @@ func isListening(url string) bool {
 	_ = fasthttp.Do(req, resp)
 
 	bodyBytes := resp.Body()
-	fmt.Println(string(bodyBytes))
-
-	return true
+	return string(bodyBytes)
 
 }

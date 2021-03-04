@@ -1,13 +1,14 @@
-package main
+package tarantulas
 
 import (
 	"bufio"
-	"fmt"
 	"github.com/valyala/fasthttp"
 	"net"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
+	"time"
 )
 
 type Result struct {
@@ -18,27 +19,24 @@ type Result struct {
 	Headers    map[string]string
 }
 
+type input struct {
+	Subdomain string
+	Port      int
+}
+
 type tarantulas struct {
 	Thread     int
-	HttpPorts  []int
-	HttpsPorts []int
+	Ports      []int
 	Subdomains []string
 	Client     *fasthttp.Client
 	Body       bool
 }
-
-func main() {
-	t := NewTarantulas()
-	fmt.Println(t.GetContents("webhook.site", []string{"https://google.com"}))
-}
-
 func NewTarantulas() *tarantulas {
 	return &tarantulas{
 		Thread:     1,
-		HttpPorts:  []int{80},
-		HttpsPorts: []int{443},
+		Ports:      []int{80, 443},
 		Subdomains: nil,
-		Client:     &fasthttp.Client{},
+		Client: &fasthttp.Client{},
 	}
 }
 
@@ -47,13 +45,8 @@ func (t tarantulas) MultiThread(count int) tarantulas {
 	return t
 }
 
-func (t tarantulas) SetHttpPorts(ports []int) tarantulas {
-	t.HttpPorts = ports
-	return t
-}
-
-func (t tarantulas) SetHttpsPorts(ports []int) tarantulas {
-	t.HttpsPorts = ports
+func (t tarantulas) SetPorts(ports []int) tarantulas {
+	t.Ports = ports
 	return t
 }
 
@@ -71,12 +64,31 @@ func (t tarantulas) WithBody() tarantulas {
 
 func (t tarantulas) GetContents(domain string, subdomains []string) []Result {
 	var wg sync.WaitGroup
-	 result := make(chan Result)
+	result := make(chan Result)
+	inputs := make(chan input)
 	var results []Result
 	for i := 0; i < t.Thread; i++ {
 		wg.Add(1)
-		go t.doRequest(domain, subdomains[0], result, &wg)
+		go func(result chan<- Result, input <-chan input, domain string, work int) {
+			for inp := range inputs {
+				t.doRequest(domain, inp.Subdomain, inp.Port, result)
+			}
+			wg.Done()
+		}(result, inputs, domain, i)
 	}
+
+	go func(subdomains []string) {
+		for _, subdomain := range subdomains {
+			for _, port := range t.Ports {
+				inputs <- input{
+					Subdomain: subdomain,
+					Port:      port,
+				}
+			}
+		}
+		close(inputs)
+	}(subdomains)
+
 	go func() {
 		wg.Wait()
 		close(result)
@@ -89,21 +101,25 @@ func (t tarantulas) GetContents(domain string, subdomains []string) []Result {
 	return results
 }
 
-func (t tarantulas) doRequest(domain, url string, result chan<- Result, wg *sync.WaitGroup) {
+func (t tarantulas) doRequest(domain, subdomain string, port int, result chan<- Result) {
+	url := "https://" + subdomain + ":" + strconv.Itoa(port)
 	req := fasthttp.AcquireRequest()
 	req.SetRequestURI(url)
+	req.Header.SetUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/74.0.3729.169 Safari/537.36")
 	defer fasthttp.ReleaseRequest(req)
 
 	resp := fasthttp.AcquireResponse()
 	resp.SkipBody = !t.Body
 	defer fasthttp.ReleaseResponse(resp)
 
-	defer wg.Done()
-
-	err := t.Client.Do(req, resp)
+	err := t.Client.DoTimeout(req, resp, 5 * time.Second)
 	if err != nil {
-		fmt.Printf("Client get failed: %s\n", err)
-		return
+		url = "http://" + subdomain + ":" + strconv.Itoa(port)
+		req.SetRequestURI(url)
+		err = t.Client.DoTimeout(req, resp, 5 * time.Second)
+		if err != nil {
+			return
+		}
 	}
 
 	headers := make(map[string]string)

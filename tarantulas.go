@@ -39,51 +39,51 @@ func NewTarantulas() *tarantulas {
 	}
 }
 
-func (t tarantulas) MultiThread(count int) tarantulas {
+func (t *tarantulas) MultiThread(count int) *tarantulas {
 	t.thread = count
 	return t
 }
 
-func (t tarantulas) SetPorts(ports []int) tarantulas {
+func (t *tarantulas) SetPorts(ports []int) *tarantulas {
 	t.ports = ports
 	return t
 }
 
-func (t tarantulas) SetUserAgents(userAgents []string) tarantulas {
+func (t *tarantulas) SetUserAgents(userAgents []string) *tarantulas {
 	t.userAgents = userAgents
 	return t
 }
 
-func (t tarantulas) SetTimeout(second int) tarantulas {
+func (t *tarantulas) SetTimeout(second int) *tarantulas {
 	t.timeout = second
 	return t
 }
 
-func (t tarantulas) SetRetry(second int) tarantulas {
+func (t *tarantulas) SetRetry(second int) *tarantulas {
 	t.timeout = second
 	return t
 }
 
-func (t tarantulas) HTTPProxy(proxyAddress string) tarantulas {
+func (t *tarantulas) HTTPProxy(proxyAddress string) *tarantulas {
 	t.client = &fasthttp.Client{
 		Dial: proxy.HTTPProxyDialer(proxyAddress),
 	}
 	return t
 }
 
-func (t tarantulas) SocksProxy(proxyAddress string) tarantulas {
+func (t *tarantulas) SocksProxy(proxyAddress string) *tarantulas {
 	t.client = &fasthttp.Client{
 		Dial: proxy.SocksDialer(proxyAddress),
 	}
 	return t
 }
 
-func (t tarantulas) WithBody() tarantulas {
+func (t *tarantulas) WithBody() *tarantulas {
 	t.withBody = true
 	return t
 }
 
-func (t tarantulas) GetContents(domain string, subdomains []string) []Result {
+func (t *tarantulas) GetAssets(domain string, subdomains []string) []Result {
 	var wg sync.WaitGroup
 	result := make(chan Result)
 	inputs := make(chan input)
@@ -122,7 +122,7 @@ func (t tarantulas) GetContents(domain string, subdomains []string) []Result {
 	return results
 }
 
-func (t tarantulas) doRequest(domain, protocol, subdomain string, port int, retry int, result chan<- Result) {
+func (t *tarantulas) doRequest(domain, protocol, subdomain string, port int, retry int, result chan<- Result) {
 	url := protocol + "://" + subdomain + ":" + strconv.Itoa(port)
 	req := fasthttp.AcquireRequest()
 	defer fasthttp.ReleaseRequest(req)

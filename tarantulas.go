@@ -2,27 +2,17 @@ package tarantulas
 
 import (
 	"bufio"
-	"github.com/valyala/fasthttp"
-	"net"
+	"math/rand"
 	"regexp"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/ghaini/tarantulas/data"
+	"github.com/ghaini/tarantulas/proxy"
+	"github.com/valyala/fasthttp"
 )
-
-type Result struct {
-	StatusCode int
-	Asset      string
-	Domain     string
-	Body       string
-	Headers    map[string]string
-}
-
-type input struct {
-	Subdomain string
-	Port      int
-}
 
 type tarantulas struct {
 	Thread     int
@@ -30,13 +20,17 @@ type tarantulas struct {
 	Subdomains []string
 	Client     *fasthttp.Client
 	Body       bool
+	UserAgents []string
 }
+
 func NewTarantulas() *tarantulas {
+	rand.Seed(time.Now().UTC().UnixNano())
 	return &tarantulas{
 		Thread:     1,
 		Ports:      []int{80, 443},
 		Subdomains: nil,
-		Client: &fasthttp.Client{},
+		Client:     &fasthttp.Client{},
+		UserAgents: data.UserAgents,
 	}
 }
 
@@ -50,9 +44,21 @@ func (t tarantulas) SetPorts(ports []int) tarantulas {
 	return t
 }
 
-func (t tarantulas) Proxy(proxyAddress string) tarantulas {
+func (t tarantulas) SetUserAgents(userAgents []string) tarantulas {
+	t.UserAgents = userAgents
+	return t
+}
+
+func (t tarantulas) HTTPProxy(proxyAddress string) tarantulas {
 	t.Client = &fasthttp.Client{
-		Dial: t.fasthttpHTTPProxyDialer(proxyAddress),
+		Dial: proxy.HTTPProxyDialer(proxyAddress),
+	}
+	return t
+}
+
+func (t tarantulas) SocksProxy(proxyAddress string) tarantulas {
+	t.Client = &fasthttp.Client{
+		Dial: proxy.SocksDialer(proxyAddress),
 	}
 	return t
 }
@@ -104,19 +110,24 @@ func (t tarantulas) GetContents(domain string, subdomains []string) []Result {
 func (t tarantulas) doRequest(domain, subdomain string, port int, result chan<- Result) {
 	url := "https://" + subdomain + ":" + strconv.Itoa(port)
 	req := fasthttp.AcquireRequest()
-	req.SetRequestURI(url)
-	req.Header.SetUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/74.0.3729.169 Safari/537.36")
 	defer fasthttp.ReleaseRequest(req)
 
-	resp := fasthttp.AcquireResponse()
-	resp.SkipBody = !t.Body
-	defer fasthttp.ReleaseResponse(resp)
+	req.SetRequestURI(url)
+	// set headers
+	req.Header.SetUserAgent(t.UserAgents[rand.Intn(len(t.UserAgents))])
+	req.Header.Set("ACCEPT", "\ttext/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9")
+	req.Header.Set("ACCEPT-ENCODING", "gzip, deflate, br")
+	req.Header.Set("REFERER", "https://www.google.com/")
 
-	err := t.Client.DoTimeout(req, resp, 5 * time.Second)
+	resp := fasthttp.AcquireResponse()
+	defer fasthttp.ReleaseResponse(resp)
+	resp.SkipBody = !t.Body
+
+	err := t.Client.DoTimeout(req, resp, 5*time.Second)
 	if err != nil {
 		url = "http://" + subdomain + ":" + strconv.Itoa(port)
 		req.SetRequestURI(url)
-		err = t.Client.DoTimeout(req, resp, 5 * time.Second)
+		err = t.Client.DoTimeout(req, resp, 5*time.Second)
 		if err != nil {
 			return
 		}
@@ -147,32 +158,5 @@ func (t tarantulas) doRequest(domain, subdomain string, port int, result chan<- 
 		Domain:     domain,
 		Body:       string(resp.Body()),
 		Headers:    headers,
-	}
-}
-
-func (t tarantulas) fasthttpHTTPProxyDialer(proxyAddr string) fasthttp.DialFunc {
-	return func(addr string) (net.Conn, error) {
-		conn, err := fasthttp.Dial(proxyAddr)
-		if err != nil {
-			return nil, err
-		}
-
-		req := "CONNECT " + addr + " HTTP/1.1\r\n"
-		// req += "Proxy-Authorization: xxx\r\n"
-		req += "\r\n"
-
-		if _, err := conn.Write([]byte(req)); err != nil {
-			return nil, err
-		}
-
-		res := fasthttp.AcquireResponse()
-		defer fasthttp.ReleaseResponse(res)
-
-		if err := res.Read(bufio.NewReader(conn)); err != nil {
-			conn.Close()
-			return nil, err
-		}
-
-		return conn, nil
 	}
 }

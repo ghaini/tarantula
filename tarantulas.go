@@ -16,70 +16,70 @@ import (
 )
 
 type tarantulas struct {
-	Thread     int
-	Ports      []int
-	Subdomains []string
-	Client     *fasthttp.Client
-	Body       bool
-	UserAgents []string
-	Timeout    int
-	Retry      int
+	thread     int
+	ports      []int
+	subdomains []string
+	client     *fasthttp.Client
+	withBody   bool
+	userAgents []string
+	timeout    int
+	retry      int
 }
 
 func NewTarantulas() *tarantulas {
 	rand.Seed(time.Now().UTC().UnixNano())
 	return &tarantulas{
-		Thread:     1,
-		Ports:      []int{443},
-		Subdomains: nil,
-		Client:     &fasthttp.Client{},
-		UserAgents: data.UserAgents,
-		Timeout:    5,
-		Retry:      2,
+		thread:     1,
+		ports:      []int{443},
+		subdomains: nil,
+		client:     &fasthttp.Client{},
+		userAgents: data.UserAgents,
+		timeout:    5,
+		retry:      2,
 	}
 }
 
 func (t tarantulas) MultiThread(count int) tarantulas {
-	t.Thread = count
+	t.thread = count
 	return t
 }
 
 func (t tarantulas) SetPorts(ports []int) tarantulas {
-	t.Ports = ports
+	t.ports = ports
 	return t
 }
 
 func (t tarantulas) SetUserAgents(userAgents []string) tarantulas {
-	t.UserAgents = userAgents
+	t.userAgents = userAgents
 	return t
 }
 
 func (t tarantulas) SetTimeout(second int) tarantulas {
-	t.Timeout = second
+	t.timeout = second
 	return t
 }
 
 func (t tarantulas) SetRetry(second int) tarantulas {
-	t.Timeout = second
+	t.timeout = second
 	return t
 }
 
 func (t tarantulas) HTTPProxy(proxyAddress string) tarantulas {
-	t.Client = &fasthttp.Client{
+	t.client = &fasthttp.Client{
 		Dial: proxy.HTTPProxyDialer(proxyAddress),
 	}
 	return t
 }
 
 func (t tarantulas) SocksProxy(proxyAddress string) tarantulas {
-	t.Client = &fasthttp.Client{
+	t.client = &fasthttp.Client{
 		Dial: proxy.SocksDialer(proxyAddress),
 	}
 	return t
 }
 
 func (t tarantulas) WithBody() tarantulas {
-	t.Body = true
+	t.withBody = true
 	return t
 }
 
@@ -88,11 +88,11 @@ func (t tarantulas) GetContents(domain string, subdomains []string) []Result {
 	result := make(chan Result)
 	inputs := make(chan input)
 	var results []Result
-	for i := 0; i < t.Thread; i++ {
+	for i := 0; i < t.thread; i++ {
 		wg.Add(1)
 		go func(result chan<- Result, input <-chan input, domain string, work int) {
 			for inp := range inputs {
-				t.doRequest(domain, constants.HTTPS, inp.Subdomain, inp.Port, t.Retry, result)
+				t.doRequest(domain, constants.HTTPS, inp.Subdomain, inp.Port, t.retry, result)
 			}
 			wg.Done()
 		}(result, inputs, domain, i)
@@ -100,7 +100,7 @@ func (t tarantulas) GetContents(domain string, subdomains []string) []Result {
 
 	go func(subdomains []string) {
 		for _, subdomain := range subdomains {
-			for _, port := range t.Ports {
+			for _, port := range t.ports {
 				inputs <- input{
 					Subdomain: subdomain,
 					Port:      port,
@@ -129,16 +129,16 @@ func (t tarantulas) doRequest(domain, protocol, subdomain string, port int, retr
 
 	req.SetRequestURI(url)
 	// set headers
-	req.Header.SetUserAgent(t.UserAgents[rand.Intn(len(t.UserAgents))])
+	req.Header.SetUserAgent(t.userAgents[rand.Intn(len(t.userAgents))])
 	req.Header.Set("ACCEPT", "\ttext/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9")
 	req.Header.Set("ACCEPT-ENCODING", "gzip, deflate, br")
 	req.Header.Set("REFERER", "https://www.google.com/")
 
 	resp := fasthttp.AcquireResponse()
 	defer fasthttp.ReleaseResponse(resp)
-	resp.SkipBody = !t.Body
+	resp.SkipBody = !t.withBody
 
-	err := t.Client.DoTimeout(req, resp, time.Duration(t.Timeout)*time.Second)
+	err := t.client.DoTimeout(req, resp, time.Duration(t.timeout)*time.Second)
 	if err != nil {
 		if retry > 0 {
 			t.doRequest(domain, protocol, subdomain, port, retry-1, result)

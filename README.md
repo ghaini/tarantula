@@ -17,6 +17,7 @@
 ### Usage:
 
     t := tarantulas.NewTarantulas()
+    t.MultiThread(100)                          // optional - default: 1 thread
     t.SetTimeout(15)                            // optional - default: 5 seconds
     t.SetPorts([]int{443,80,8080})              // optional - default: 80,443
     t.SetRetry(5)                               // on failure request - optional - default: 80,443

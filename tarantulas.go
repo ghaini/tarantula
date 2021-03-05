@@ -34,8 +34,8 @@ func NewTarantulas() *tarantulas {
 		Subdomains: nil,
 		Client:     &fasthttp.Client{},
 		UserAgents: data.UserAgents,
-		Timeout:    10,
-		Retry:      3,
+		Timeout:    5,
+		Retry:      2,
 	}
 }
 

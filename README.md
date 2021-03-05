@@ -24,5 +24,5 @@ Bugs and feature request are tracked on <a href="https://github.com/ghaini/taran
 
 ### License:
 
-Healer is under the Apache 2.0 license. See the <a href="https://github.com/ghaini/tarantulas/blob/master/LICENSE">LICENSE</a> file for details.
+Tarantulas is under the Apache 2.0 license. See the <a href="https://github.com/ghaini/tarantulas/blob/master/LICENSE">LICENSE</a> file for details.
 

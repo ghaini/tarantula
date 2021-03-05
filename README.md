@@ -5,7 +5,7 @@
 [![LICENSE](https://img.shields.io/github/license/ghaini/tarantulas.svg?style=flat-square)](https://github.com/ghaini/tarantulas/blob/master/LICENSE)
 [![GitHub stars](https://img.shields.io/github/stars/ghaini/tarantulas)](https://github.com/ghaini/tarantulas/stargazers)
 [![GitHub issues](https://img.shields.io/github/issues/ghaini/tarantulas)](https://github.com/ghaini/tarantulas/issues)
-[![GitHub issues](https://img.shields.io/github/release/ghaini/tarantulas)](https://github.com/ghaini/tarantulas/issues)
+[![GitHub issues](https://img.shields.io/github/release/ghaini/tarantulas)](https://github.com/ghaini/tarantulas/releases)
 
  tarantulas is a fast and multi-purpose HTTP toolkit allow to run multiple probers
  

@@ -21,6 +21,7 @@ type tarantulas struct {
 	Client     *fasthttp.Client
 	Body       bool
 	UserAgents []string
+	Timeout    int
 }
 
 func NewTarantulas() *tarantulas {
@@ -31,6 +32,7 @@ func NewTarantulas() *tarantulas {
 		Subdomains: nil,
 		Client:     &fasthttp.Client{},
 		UserAgents: data.UserAgents,
+		Timeout:    5,
 	}
 }
 
@@ -46,6 +48,11 @@ func (t tarantulas) SetPorts(ports []int) tarantulas {
 
 func (t tarantulas) SetUserAgents(userAgents []string) tarantulas {
 	t.UserAgents = userAgents
+	return t
+}
+
+func (t tarantulas) SetTimeout(second int) tarantulas {
+	t.Timeout = second
 	return t
 }
 
@@ -123,11 +130,11 @@ func (t tarantulas) doRequest(domain, subdomain string, port int, result chan<- 
 	defer fasthttp.ReleaseResponse(resp)
 	resp.SkipBody = !t.Body
 
-	err := t.Client.DoTimeout(req, resp, 5*time.Second)
+	err := t.Client.DoTimeout(req, resp, time.Duration(t.Timeout)*time.Second)
 	if err != nil {
 		url = "http://" + subdomain + ":" + strconv.Itoa(port)
 		req.SetRequestURI(url)
-		err = t.Client.DoTimeout(req, resp, 5*time.Second)
+		err = t.Client.DoTimeout(req, resp, time.Duration(t.Timeout)*time.Second)
 		if err != nil {
 			return
 		}

@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ghaini/tarantulas/constants"
 	"github.com/ghaini/tarantulas/data"
 	"github.com/ghaini/tarantulas/proxy"
 	"github.com/valyala/fasthttp"
@@ -22,17 +23,19 @@ type tarantulas struct {
 	Body       bool
 	UserAgents []string
 	Timeout    int
+	Retry      int
 }
 
 func NewTarantulas() *tarantulas {
 	rand.Seed(time.Now().UTC().UnixNano())
 	return &tarantulas{
 		Thread:     1,
-		Ports:      []int{80, 443},
+		Ports:      []int{443},
 		Subdomains: nil,
 		Client:     &fasthttp.Client{},
 		UserAgents: data.UserAgents,
-		Timeout:    5,
+		Timeout:    10,
+		Retry:      3,
 	}
 }
 
@@ -52,6 +55,11 @@ func (t tarantulas) SetUserAgents(userAgents []string) tarantulas {
 }
 
 func (t tarantulas) SetTimeout(second int) tarantulas {
+	t.Timeout = second
+	return t
+}
+
+func (t tarantulas) SetRetry(second int) tarantulas {
 	t.Timeout = second
 	return t
 }
@@ -84,7 +92,7 @@ func (t tarantulas) GetContents(domain string, subdomains []string) []Result {
 		wg.Add(1)
 		go func(result chan<- Result, input <-chan input, domain string, work int) {
 			for inp := range inputs {
-				t.doRequest(domain, inp.Subdomain, inp.Port, result)
+				t.doRequest(domain, constants.HTTPS, inp.Subdomain, inp.Port, t.Retry, result)
 			}
 			wg.Done()
 		}(result, inputs, domain, i)
@@ -114,8 +122,8 @@ func (t tarantulas) GetContents(domain string, subdomains []string) []Result {
 	return results
 }
 
-func (t tarantulas) doRequest(domain, subdomain string, port int, result chan<- Result) {
-	url := "https://" + subdomain + ":" + strconv.Itoa(port)
+func (t tarantulas) doRequest(domain, protocol, subdomain string, port int, retry int, result chan<- Result) {
+	url := protocol + "://" + subdomain + ":" + strconv.Itoa(port)
 	req := fasthttp.AcquireRequest()
 	defer fasthttp.ReleaseRequest(req)
 
@@ -132,10 +140,13 @@ func (t tarantulas) doRequest(domain, subdomain string, port int, result chan<- 
 
 	err := t.Client.DoTimeout(req, resp, time.Duration(t.Timeout)*time.Second)
 	if err != nil {
-		url = "http://" + subdomain + ":" + strconv.Itoa(port)
-		req.SetRequestURI(url)
-		err = t.Client.DoTimeout(req, resp, time.Duration(t.Timeout)*time.Second)
-		if err != nil {
+		if retry > 0 {
+			t.doRequest(domain, protocol, subdomain, port, retry-1, result)
+			return
+		} else if protocol == constants.HTTPS {
+			t.doRequest(domain, constants.HTTP, subdomain, port, 3, result)
+			return
+		} else {
 			return
 		}
 	}

@@ -18,7 +18,7 @@
 
 The <a href="https://github.com/ghaini/tarantulas/wiki">wiki</a> contains all the documentation related to Tarantulas.
     
-### bugs and feature requests:
+### Bugs and feature requests:
 
 Bugs and feature request are tracked on <a href="https://github.com/ghaini/tarantulas/issues">GitHub</a>
 

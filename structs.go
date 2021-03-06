@@ -6,6 +6,7 @@ type Result struct {
 	Domain     string
 	Body       string
 	Headers    map[string]string
+	Title      string
 }
 
 type input struct {

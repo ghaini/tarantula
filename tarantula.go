@@ -2,6 +2,7 @@ package tarantula
 
 import (
 	"bufio"
+	"fmt"
 	"math/rand"
 	"regexp"
 	"strconv"
@@ -9,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ghaini/tarantula/common"
 	"github.com/ghaini/tarantula/constants"
 	"github.com/ghaini/tarantula/data"
 	"github.com/ghaini/tarantula/proxy"
@@ -37,6 +39,11 @@ func NewTarantula() *tarantula {
 		timeout:    5,
 		retry:      2,
 	}
+}
+
+func main()  {
+	//fmt.Println("سلام خوبی")
+	fmt.Println(NewTarantula().WithBody().GetAssets("ddd", []string{"snappfood.ir"})[0].Body)
 }
 
 func (t *tarantula) MultiThread(count int) *tarantula {
@@ -131,8 +138,8 @@ func (t *tarantula) doRequest(domain, protocol, subdomain string, port int, retr
 	// set headers
 	req.Header.SetUserAgent(t.userAgents[rand.Intn(len(t.userAgents))])
 	req.Header.Set("ACCEPT", "\ttext/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9")
-	req.Header.Set("ACCEPT-ENCODING", "gzip, deflate, br")
 	req.Header.Set("REFERER", "https://www.google.com/")
+	req.Header.Set("Accept-Charset","utf-8")
 
 	resp := fasthttp.AcquireResponse()
 	defer fasthttp.ReleaseResponse(resp)
@@ -170,11 +177,13 @@ func (t *tarantula) doRequest(domain, protocol, subdomain string, port int, retr
 		headers[strings.ToLower(strings.TrimSpace(headerMatch[1]))] = strings.ToLower(strings.TrimSpace(headerMatch[2]))
 	}
 
+	title := common.ExtractTitle(resp)
 	result <- Result{
 		StatusCode: resp.StatusCode(),
 		Asset:      url,
 		Domain:     domain,
 		Body:       string(resp.Body()),
 		Headers:    headers,
+		Title:      title,
 	}
 }

@@ -2,7 +2,6 @@ package tarantula
 
 import (
 	"bufio"
-	"fmt"
 	"math/rand"
 	"regexp"
 	"strconv"
@@ -23,6 +22,7 @@ type tarantula struct {
 	subdomains []string
 	client     *fasthttp.Client
 	withBody   bool
+	withTitle  bool
 	userAgents []string
 	timeout    int
 	retry      int
@@ -39,11 +39,6 @@ func NewTarantula() *tarantula {
 		timeout:    5,
 		retry:      2,
 	}
-}
-
-func main()  {
-	//fmt.Println("سلام خوبی")
-	fmt.Println(NewTarantula().WithBody().GetAssets("ddd", []string{"snappfood.ir"})[0].Body)
 }
 
 func (t *tarantula) MultiThread(count int) *tarantula {
@@ -87,6 +82,11 @@ func (t *tarantula) SocksProxy(proxyAddress string) *tarantula {
 
 func (t *tarantula) WithBody() *tarantula {
 	t.withBody = true
+	return t
+}
+
+func (t *tarantula) WithTitle() *tarantula {
+	t.withTitle = true
 	return t
 }
 
@@ -139,11 +139,11 @@ func (t *tarantula) doRequest(domain, protocol, subdomain string, port int, retr
 	req.Header.SetUserAgent(t.userAgents[rand.Intn(len(t.userAgents))])
 	req.Header.Set("ACCEPT", "\ttext/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9")
 	req.Header.Set("REFERER", "https://www.google.com/")
-	req.Header.Set("Accept-Charset","utf-8")
+	req.Header.Set("Accept-Charset", "utf-8")
 
 	resp := fasthttp.AcquireResponse()
 	defer fasthttp.ReleaseResponse(resp)
-	resp.SkipBody = !t.withBody
+	resp.SkipBody = !t.withBody && !t.withTitle
 
 	err := t.client.DoTimeout(req, resp, time.Duration(t.timeout)*time.Second)
 	if err != nil {
@@ -177,12 +177,21 @@ func (t *tarantula) doRequest(domain, protocol, subdomain string, port int, retr
 		headers[strings.ToLower(strings.TrimSpace(headerMatch[1]))] = strings.ToLower(strings.TrimSpace(headerMatch[2]))
 	}
 
-	title := common.ExtractTitle(resp)
+	title := ""
+	if t.withTitle {
+		title = common.ExtractTitle(resp)
+	}
+
+	body := ""
+	if t.withBody {
+		body = string(resp.Body())
+	}
+
 	result <- Result{
 		StatusCode: resp.StatusCode(),
 		Asset:      url,
 		Domain:     domain,
-		Body:       string(resp.Body()),
+		Body:       body,
 		Headers:    headers,
 		Title:      title,
 	}

@@ -9,9 +9,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ghaini/tarantulas/constants"
-	"github.com/ghaini/tarantulas/data"
-	"github.com/ghaini/tarantulas/proxy"
+	"github.com/ghaini/tarantula/constants"
+	"github.com/ghaini/tarantula/data"
+	"github.com/ghaini/tarantula/proxy"
 	"github.com/valyala/fasthttp"
 )
 

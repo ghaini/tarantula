@@ -5,6 +5,7 @@
 [![LICENSE](https://img.shields.io/github/license/ghaini/tarantula.svg?style=flat-square)](https://github.com/ghaini/tarantula/blob/master/LICENSE)
 [![GitHub stars](https://img.shields.io/github/stars/ghaini/tarantula)](https://github.com/ghaini/tarantula/stargazers)
 [![GitHub issues](https://img.shields.io/github/issues/ghaini/tarantula)](https://github.com/ghaini/tarantula/issues)
+[![contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)](https://github.com/ghaini/tarantula/issues)
 [![GitHub Release](https://img.shields.io/github/release/ghaini/tarantula)](https://github.com/ghaini/tarantula/releases)
 
 

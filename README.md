@@ -21,9 +21,9 @@
     t.MultiThread(100)                          // optional - default: 1 thread
     t.SetTimeout(15)                            // optional - default: 5 seconds
     t.SetPorts([]int{443,80,8080})              // optional - default: 80,443
-    t.SetRetry(5)                               // on failure request - optional - default: 80,443
-    t.SetUserAgents([]string{"curl"})           // use custom user agent - optional  
-    t.HTTPProxy("proxy.com:80")                 // use http proxy for requests (if you have socks proxy, you can use t.SocksProxy()) - optional
+    t.SetRetry(5)                               // optional - on failure request - default: 80,443
+    t.SetUserAgents([]string{"curl"})           // optional - use custom user agent 
+    t.HTTPProxy("proxy.com:80")                 // optional - use http proxy for requests (if you have socks proxy, you can use t.SocksProxy())
     t.GetAssets(domain, []string{subdomains})   // receive active assets
     
 ### Documentation:

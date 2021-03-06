@@ -5,6 +5,7 @@
 [![LICENSE](https://img.shields.io/github/license/ghaini/tarantula.svg?style=flat-square)](https://github.com/ghaini/tarantula/blob/master/LICENSE)
 [![GitHub stars](https://img.shields.io/github/stars/ghaini/tarantula)](https://github.com/ghaini/tarantula/stargazers)
 [![GitHub issues](https://img.shields.io/github/issues/ghaini/tarantula)](https://github.com/ghaini/tarantula/issues)
+[![contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)](https://github.com/ghaini/tarantula/issues)
 [![GitHub Release](https://img.shields.io/github/release/ghaini/tarantula)](https://github.com/ghaini/tarantula/releases)
 
 
@@ -16,14 +17,14 @@
     
 ### Usage:
 
-    t := tarantulas.NewTarantulas()
+    t := tarantulas.NewTarantula()
     t.MultiThread(100)                          // optional - default: 1 thread
     t.SetTimeout(15)                            // optional - default: 5 seconds
     t.SetPorts([]int{443,80,8080})              // optional - default: 80,443
-    t.SetRetry(5)                               // on failure request - optional - default: 80,443
-    t.SetUserAgents([]string{"curl"})           // use custom user agent - optional  
-    t.HTTPProxy("proxy.com:80")                 // use http proxy for requests (if you have socks proxy, you can use t.SocksProxy()) - optional
-    t.GetContents(domain, []string{subdomains}) // receive active assets
+    t.SetRetry(5)                               // optional - on failure request - default: 80,443
+    t.SetUserAgents([]string{"curl"})           // optional - use custom user agent 
+    t.HTTPProxy("proxy.com:80")                 // optional - use http proxy for requests (if you have socks proxy, you can use t.SocksProxy())
+    t.GetAssets(domain, []string{subdomains})   // receive active assets
     
 ### Documentation:
 

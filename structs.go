@@ -1,4 +1,4 @@
-package tarantulas
+package tarantula
 
 type Result struct {
 	StatusCode int

@@ -1,4 +1,4 @@
-module github.com/ghaini/tarantulas
+module github.com/ghaini/tarantula
 
 go 1.15
 

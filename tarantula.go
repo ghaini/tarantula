@@ -129,6 +129,27 @@ func (t *tarantula) GetAssets(domain string, subdomains []string) []Result {
 	return results
 }
 
+func (t *tarantula) GetAssetsChan(domain string, subdomains []string) chan Result {
+	var wg sync.WaitGroup
+	result := make(chan Result, 100)
+	inputs := make(chan input)
+	for i := 0; i < t.thread; i++ {
+		wg.Add(1)
+		go func(result chan<- Result, input <-chan input, domain string, work int) {
+			for inp := range inputs {
+				t.doRequest(domain, constants.HTTPS, inp.Subdomain, inp.Port, t.retry, result)
+			}
+			wg.Done()
+		}(result, inputs, domain, i)
+	}
+
+	go func() {
+		wg.Wait()
+	}()
+
+	return result
+}
+
 func (t *tarantula) doRequest(domain, protocol, subdomain string, port int, retry int, result chan<- Result) {
 	url := protocol + "://" + subdomain + ":" + strconv.Itoa(port)
 	req := fasthttp.AcquireRequest()

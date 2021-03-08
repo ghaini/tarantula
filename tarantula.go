@@ -37,7 +37,6 @@ func NewTarantula() *tarantula {
 		client:     &fasthttp.Client{},
 		userAgents: data.UserAgents,
 		timeout:    5,
-		retry:      2,
 	}
 }
 
@@ -185,7 +184,7 @@ func (t *tarantula) doRequest(domain, protocol, subdomain string, port int, retr
 			t.doRequest(domain, protocol, subdomain, port, retry-1, result)
 			return
 		} else if protocol == constants.HTTPS {
-			t.doRequest(domain, constants.HTTP, subdomain, port, 3, result)
+			t.doRequest(domain, constants.HTTP, subdomain, port, t.retry, result)
 			return
 		} else {
 			return

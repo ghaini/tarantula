@@ -2,6 +2,7 @@ package tarantula
 
 import (
 	"bufio"
+	"github.com/ghaini/tarantula/detector"
 	"math/rand"
 	"regexp"
 	"strconv"
@@ -17,15 +18,17 @@ import (
 )
 
 type tarantula struct {
-	thread     int
-	ports      []int
-	subdomains []string
-	client     *fasthttp.Client
-	withBody   bool
-	withTitle  bool
-	userAgents []string
-	timeout    int
-	retry      int
+	thread            int
+	ports             []int
+	subdomains        []string
+	client            *fasthttp.Client
+	withBody          bool
+	withTitle         bool
+	withTechnology    bool
+	userAgents        []string
+	timeout           int
+	retry             int
+	filterStatusCodes []int
 }
 
 func NewTarantula() *tarantula {
@@ -86,6 +89,16 @@ func (t *tarantula) WithBody() *tarantula {
 
 func (t *tarantula) WithTitle() *tarantula {
 	t.withTitle = true
+	return t
+}
+
+func (t *tarantula) WithTechnology() *tarantula {
+	t.withTechnology = true
+	return t
+}
+
+func (t *tarantula) FilterStatusCode(codes []int) *tarantula {
+	t.filterStatusCodes = codes
 	return t
 }
 
@@ -176,8 +189,7 @@ func (t *tarantula) doRequest(domain, protocol, subdomain string, port int, retr
 
 	resp := fasthttp.AcquireResponse()
 	defer fasthttp.ReleaseResponse(resp)
-	resp.SkipBody = !t.withBody && !t.withTitle
-
+	resp.SkipBody = !t.withBody && !t.withTitle && !t.withTechnology
 	err := t.client.DoTimeout(req, resp, time.Duration(t.timeout)*time.Second)
 	if err != nil {
 		if retry > 0 {
@@ -191,6 +203,13 @@ func (t *tarantula) doRequest(domain, protocol, subdomain string, port int, retr
 		}
 	}
 
+	for _, statusCode := range t.filterStatusCodes {
+		if statusCode == resp.StatusCode() {
+			return
+		}
+	}
+
+	resp.StatusCode()
 	headers := make(map[string]string)
 	headerString := resp.Header.String()
 
@@ -220,12 +239,27 @@ func (t *tarantula) doRequest(domain, protocol, subdomain string, port int, retr
 		body = string(resp.Body())
 	}
 
+	var technologies []Technology
+	if t.withTechnology {
+		d := detector.Technology{}
+		matches := d.Technology(url, resp.Body(), &resp.Header)
+		for _, match := range matches {
+			technology := Technology{
+				Name:       match.AppName,
+				Categories: match.CatNames,
+				Website : match.Website,
+			}
+			technologies = append(technologies, technology)
+		}
+	}
+
 	result <- Result{
-		StatusCode: resp.StatusCode(),
-		Asset:      url,
-		Domain:     domain,
-		Body:       body,
-		Headers:    headers,
-		Title:      title,
+		StatusCode:   resp.StatusCode(),
+		Asset:        url,
+		Domain:       domain,
+		Body:         body,
+		Headers:      headers,
+		Title:        title,
+		Technologies: technologies,
 	}
 }

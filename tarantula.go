@@ -104,7 +104,7 @@ func (t *tarantula) FilterStatusCode(codes []int) *tarantula {
 
 func (t *tarantula) GetAssets(domain string, subdomains []string) []Result {
 	var wg sync.WaitGroup
-	result := make(chan Result)
+	result := make(chan Result, 100)
 	inputs := make(chan input)
 	var results []Result
 	for i := 0; i < t.thread; i++ {

@@ -7,7 +7,9 @@ import (
 	"github.com/valyala/fasthttp"
 	"io"
 	"os"
+	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
 
 	"github.com/PuerkitoBio/goquery"
@@ -95,7 +97,13 @@ func (t *StringArray) UnmarshalJSON(data []byte) error {
 }
 
 func (t *Technology) Technology(url string, response []byte, headers *fasthttp.ResponseHeader) []Match {
-	appsFile, err := os.Open("./data/technologies.json")
+	_, b, _, _ := runtime.Caller(0)
+	basePath := filepath.Dir(b)
+	appsFile, err := os.Open(basePath + "/../data/technologies.json")
+	if err != nil {
+		return nil
+	}
+
 	defer appsFile.Close()
 	t.loadApps(appsFile)
 	doc, err := goquery.NewDocumentFromReader(bytes.NewReader(response))

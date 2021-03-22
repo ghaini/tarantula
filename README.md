@@ -9,7 +9,9 @@
 [![GitHub Release](https://img.shields.io/github/release/ghaini/tarantula)](https://github.com/ghaini/tarantula/releases)
 
 
- tarantula is a fast and multi-purpose HTTP toolkit allow to run multiple probers
+ tarantula is a fast and multi-purpose HTTP toolkit allow running multiple probes.
+
+ check subdomain up, header, contents and detect technologies
  
 ### Installation:
 
@@ -24,6 +26,8 @@
     t.SetRetry(5)                               // optional - on failure request - default: 80,443
     t.SetUserAgents([]string{"curl"})           // optional - use custom user agent 
     t.HTTPProxy("proxy.com:80")                 // optional - use http proxy for requests (if you have socks proxy, you can use t.SocksProxy())
+    t.WithTechnology()                          // optional - use technology detector 
+    t.FilterStatusCode([]int{400})              // optional - filter status code	
     t.GetAssets(domain, []string{subdomains})   // receive active assets
     
 ### Documentation:

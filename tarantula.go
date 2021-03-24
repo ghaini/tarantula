@@ -233,7 +233,7 @@ func (t *tarantula) doRequest(domain, protocol, subdomain string, port int, retr
 			for _, cat := range match.CatNames {
 				cat = strings.ToLower(cat)
 				cat = strings.ReplaceAll(cat, " ", "-")
-				technologies[cat] = match.AppName
+				technologies[cat] = strings.ToLower(match.AppName)
 			}
 		}
 	}

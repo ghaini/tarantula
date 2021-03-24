@@ -6,8 +6,8 @@ type Result struct {
 	Domain       string
 	Body         string
 	Headers      map[string]string
+	Technologies map[string]string
 	Title        string
-	Technologies []Technology
 }
 
 type input struct {

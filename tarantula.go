@@ -225,17 +225,14 @@ func (t *tarantula) doRequest(domain, protocol, subdomain string, port int, retr
 		body = string(resp.Body())
 	}
 
-	var technologies []Technology
+	technologies := make(map[string]string)
 	if t.withTechnology {
 		d := detector.Technology{}
 		matches := d.Technology(url, resp.Body(), &resp.Header)
 		for _, match := range matches {
-			technology := Technology{
-				Name:       match.AppName,
-				Categories: match.CatNames,
-				Website : match.Website,
+			for _, cat := range match.CatNames {
+				technologies[cat] = match.AppName
 			}
-			technologies = append(technologies, technology)
 		}
 	}
 

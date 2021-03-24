@@ -231,6 +231,8 @@ func (t *tarantula) doRequest(domain, protocol, subdomain string, port int, retr
 		matches := d.Technology(url, resp.Body(), &resp.Header)
 		for _, match := range matches {
 			for _, cat := range match.CatNames {
+				cat = strings.ToLower(cat)
+				cat = strings.ReplaceAll(cat, " ", "-")
 				technologies[cat] = match.AppName
 			}
 		}

@@ -1,10 +1,8 @@
 package tarantula
 
 import (
-	"bufio"
 	"github.com/ghaini/tarantula/detector"
 	"math/rand"
-	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -213,23 +211,9 @@ func (t *tarantula) doRequest(domain, protocol, subdomain string, port int, retr
 
 	resp.StatusCode()
 	headers := make(map[string]string)
-	headerString := resp.Header.String()
-
-	r, _ := regexp.Compile(`(^.+)\:(.+$)`)
-	scanner := bufio.NewScanner(strings.NewReader(headerString))
-	for scanner.Scan() {
-		text := scanner.Text()
-		if len(strings.TrimSpace(text)) == 0 {
-			continue
-		}
-
-		headerMatch := r.FindStringSubmatch(text)
-		if len(headerMatch) == 0 {
-			continue
-		}
-
-		headers[strings.ToLower(strings.TrimSpace(headerMatch[1]))] = strings.ToLower(strings.TrimSpace(headerMatch[2]))
-	}
+	resp.Header.VisitAll(func(key, value []byte) {
+		headers[strings.ToLower(string(key))] = strings.ToLower(string(value))
+	})
 
 	title := ""
 	if t.withTitle {

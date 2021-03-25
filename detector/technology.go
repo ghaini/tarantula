@@ -7,7 +7,6 @@ import (
 	"github.com/ghaini/tarantula/constants"
 	"github.com/valyala/fasthttp"
 	"io"
-	"net/http"
 	"os"
 	"regexp"
 	"strings"
@@ -397,9 +396,13 @@ func (t *Technology) getTechnologyListFile() error {
 	}
 
 	defer appsFile.Close()
-	resp, err := http.Get(constants.TechnologiesFileAddress)
-	defer resp.Body.Close()
-	_, err = io.Copy(appsFile, resp.Body)
+	_, resp, err := fasthttp.Get(nil, constants.TechnologiesFileAddress)
+	if err != nil {
+		return err
+	}
+
+	r := bytes.NewReader(resp)
+	_, err = io.Copy(appsFile, r)
 	if err != nil {
 		return err
 	}

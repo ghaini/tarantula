@@ -6,4 +6,4 @@ const (
 	HTTPS = "https"
 )
 
-const TechnologiesFileAddress = "https://raw.githubusercontent.com/AliasIO/wappalyzer/master/src/technologies.json"
+const TechnologiesFileAddress = "https://raw.githubusercontent.com/ghaini/tarantula/master/data/technologies.json"

@@ -9,9 +9,7 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"path/filepath"
 	"regexp"
-	"runtime"
 	"strings"
 
 	"github.com/PuerkitoBio/goquery"
@@ -99,15 +97,19 @@ func (t *StringArray) UnmarshalJSON(data []byte) error {
 }
 
 func (t *Technology) Technology(url string, response []byte, headers *fasthttp.ResponseHeader) []Match {
-	_, b, _, _ := runtime.Caller(0)
-	basePath := filepath.Dir(b)
-	appsFile, err := os.Open(basePath + "/../data/technologies.json")
+	home, err := os.UserHomeDir()
 	if err != nil {
-		isSuccess := t.getTechnologyListFile()
-		if !isSuccess {
+		return nil
+	}
+
+	appsFile, err := os.Open(home + "/.tarantula/technologies.json")
+	if err != nil {
+		err = t.getTechnologyListFile()
+		if err != nil {
 			return nil
 		}
-		appsFile, err = os.Open(basePath + "/../data/technologies.json")
+
+		appsFile, err = os.Open(home + "/.tarantula/technologies.json")
 		if err != nil {
 			return nil
 		}
@@ -382,12 +384,14 @@ func findVersion(matches [][]string, version string) string {
 	return ""
 }
 
-func (t *Technology) getTechnologyListFile() bool {
-	_, b, _, _ := runtime.Caller(0)
-	basePath := filepath.Dir(b)
-	appsFile, err := os.Create(basePath + "/../data/technologies.json")
+func (t *Technology) getTechnologyListFile() error {
+	home, err := os.UserHomeDir()
 	if err != nil {
-		return false
+		return err
+	}
+	appsFile, err := os.Create(home + "/.tarantula/technologies.json")
+	if err != nil {
+		return err
 	}
 
 	defer appsFile.Close()
@@ -395,8 +399,8 @@ func (t *Technology) getTechnologyListFile() bool {
 	defer resp.Body.Close()
 	_, err = io.Copy(appsFile, resp.Body)
 	if err != nil {
-		return false
+		return err
 	}
 
-	return true
+	return nil
 }

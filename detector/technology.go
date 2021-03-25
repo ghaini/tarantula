@@ -67,6 +67,16 @@ type Match struct {
 // StringArray type is a wrapper for []string for use in unmarshalling the technologies.json
 type StringArray []string
 
+func init() {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return
+	}
+	if _, err := os.Stat(home + "/.tarantula/technologies.json"); os.IsNotExist(err) {
+		getTechnologyListFile()
+	}
+}
+
 // UnmarshalJSON is a custom unmarshaler for handling bogus technologies.json types from wappalyzer
 func (t *StringArray) UnmarshalJSON(data []byte) error {
 	var s string
@@ -103,15 +113,7 @@ func (t *Technology) Technology(url string, response []byte, headers *fasthttp.R
 
 	appsFile, err := os.Open(home + "/.tarantula/technologies.json")
 	if err != nil {
-		err = t.getTechnologyListFile()
-		if err != nil {
-			return nil
-		}
-
-		appsFile, err = os.Open(home + "/.tarantula/technologies.json")
-		if err != nil {
-			return nil
-		}
+		return nil
 	}
 
 	defer appsFile.Close()
@@ -383,7 +385,7 @@ func findVersion(matches [][]string, version string) string {
 	return ""
 }
 
-func (t *Technology) getTechnologyListFile() error {
+func getTechnologyListFile() error {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return err

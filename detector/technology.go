@@ -75,7 +75,19 @@ func NewTechnology() *Technology {
 	if _, err := os.Stat(home + "/.tarantula/technologies.json"); os.IsNotExist(err) {
 		getTechnologyListFile()
 	}
-	return &Technology{}
+	home, err = os.UserHomeDir()
+	if err != nil {
+		return nil
+	}
+	t := &Technology{}
+	appsFile, err := os.Open(home + "/.tarantula/technologies.json")
+	if err != nil {
+		return nil
+	}
+
+	defer appsFile.Close()
+	t.loadApps(appsFile)
+	return t
 }
 
 // UnmarshalJSON is a custom unmarshaler for handling bogus technologies.json types from wappalyzer
@@ -107,18 +119,6 @@ func (t *StringArray) UnmarshalJSON(data []byte) error {
 }
 
 func (t *Technology) Technology(url string, response []byte, headers *fasthttp.ResponseHeader) []Match {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return nil
-	}
-
-	appsFile, err := os.Open(home + "/.tarantula/technologies.json")
-	if err != nil {
-		return nil
-	}
-
-	defer appsFile.Close()
-	t.loadApps(appsFile)
 	doc, err := goquery.NewDocumentFromReader(bytes.NewReader(response))
 	if err != nil {
 		return []Match{}

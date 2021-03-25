@@ -67,14 +67,15 @@ type Match struct {
 // StringArray type is a wrapper for []string for use in unmarshalling the technologies.json
 type StringArray []string
 
-func init() {
+func NewTechnology() *Technology {
 	home, err := os.UserHomeDir()
 	if err != nil {
-		return
+		return &Technology{}
 	}
 	if _, err := os.Stat(home + "/.tarantula/technologies.json"); os.IsNotExist(err) {
 		getTechnologyListFile()
 	}
+	return &Technology{}
 }
 
 // UnmarshalJSON is a custom unmarshaler for handling bogus technologies.json types from wappalyzer

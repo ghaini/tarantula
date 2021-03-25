@@ -16,17 +16,18 @@ import (
 )
 
 type tarantula struct {
-	thread            int
-	ports             []int
-	subdomains        []string
-	client            *fasthttp.Client
-	withBody          bool
-	withTitle         bool
-	withTechnology    bool
-	userAgents        []string
-	timeout           int
-	retry             int
-	filterStatusCodes []int
+	thread             int
+	ports              []int
+	subdomains         []string
+	client             *fasthttp.Client
+	withBody           bool
+	withTitle          bool
+	withTechnology     bool
+	userAgents         []string
+	timeout            int
+	retry              int
+	filterStatusCodes  []int
+	technologyDetector *detector.Technology
 }
 
 func NewTarantula() *tarantula {
@@ -38,6 +39,7 @@ func NewTarantula() *tarantula {
 		client:     &fasthttp.Client{},
 		userAgents: data.UserAgents,
 		timeout:    5,
+		technologyDetector: detector.NewTechnology(),
 	}
 }
 
@@ -227,8 +229,7 @@ func (t *tarantula) doRequest(domain, protocol, subdomain string, port int, retr
 
 	technologies := make(map[string]string)
 	if t.withTechnology {
-		d := detector.Technology{}
-		matches := d.Technology(url, resp.Body(), &resp.Header)
+		matches := t.technologyDetector.Technology(url, resp.Body(), &resp.Header)
 		for _, match := range matches {
 			for _, cat := range match.CatNames {
 				cat = strings.ToLower(cat)

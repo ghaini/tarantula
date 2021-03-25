@@ -5,3 +5,5 @@ const (
 	HTTP  = "http"
 	HTTPS = "https"
 )
+
+const TechnologiesFileAddress = "https://raw.githubusercontent.com/AliasIO/wappalyzer/master/src/technologies.json"

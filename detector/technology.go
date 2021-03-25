@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/ghaini/tarantula/constants"
 	"github.com/valyala/fasthttp"
 	"io"
+	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -101,7 +103,14 @@ func (t *Technology) Technology(url string, response []byte, headers *fasthttp.R
 	basePath := filepath.Dir(b)
 	appsFile, err := os.Open(basePath + "/../data/technologies.json")
 	if err != nil {
-		return nil
+		isSuccess := t.getTechnologyListFile()
+		if !isSuccess {
+			return nil
+		}
+		appsFile, err = os.Open(basePath + "/../data/technologies.json")
+		if err != nil {
+			return nil
+		}
 	}
 
 	defer appsFile.Close()
@@ -371,4 +380,23 @@ func findVersion(matches [][]string, version string) string {
 	}
 
 	return ""
+}
+
+func (t *Technology) getTechnologyListFile() bool {
+	_, b, _, _ := runtime.Caller(0)
+	basePath := filepath.Dir(b)
+	appsFile, err := os.Create(basePath + "/../data/technologies.json")
+	if err != nil {
+		return false
+	}
+
+	defer appsFile.Close()
+	resp, err := http.Get(constants.TechnologiesFileAddress)
+	defer resp.Body.Close()
+	_, err = io.Copy(appsFile, resp.Body)
+	if err != nil {
+		return false
+	}
+
+	return true
 }

@@ -389,6 +389,8 @@ func (t *Technology) getTechnologyListFile() error {
 	if err != nil {
 		return err
 	}
+
+	_ = os.MkdirAll(home+"/.tarantula", 0755)
 	appsFile, err := os.Create(home + "/.tarantula/technologies.json")
 	if err != nil {
 		return err

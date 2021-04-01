@@ -63,8 +63,8 @@ func (t *tarantula) SetTimeout(second int) *tarantula {
 	return t
 }
 
-func (t *tarantula) SetRetry(second int) *tarantula {
-	t.timeout = second
+func (t *tarantula) SetRetry(number int) *tarantula {
+	t.retry = number
 	return t
 }
 

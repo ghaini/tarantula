@@ -8,7 +8,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ghaini/tarantula/common"
 	"github.com/ghaini/tarantula/constants"
 	"github.com/ghaini/tarantula/data"
 	"github.com/ghaini/tarantula/proxy"
@@ -219,7 +218,7 @@ func (t *tarantula) doRequest(domain, protocol, subdomain string, port int, retr
 
 	title := ""
 	if t.withTitle {
-		title = common.ExtractTitle(resp)
+		title = detector.ExtractTitle(resp)
 	}
 
 	body := ""

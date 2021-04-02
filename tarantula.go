@@ -185,8 +185,7 @@ func (t *tarantula) doRequest(domain, protocol, subdomain string, port int, retr
 	req.Header.Set("ACCEPT", "\ttext/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9")
 	req.Header.Set("REFERER", "https://www.google.com/")
 	req.Header.Set("Accept-Charset", "utf-8")
-	req.Header.Set("access-control-allow-origin", url)
-	req.Header.Set("access-control-allow-credentials", "true")
+	req.Header.Set("origin", url)
 
 	resp := fasthttp.AcquireResponse()
 	defer fasthttp.ReleaseResponse(resp)

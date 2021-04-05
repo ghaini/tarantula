@@ -1,4 +1,4 @@
-package proxy
+package network
 
 import (
 	"github.com/valyala/fasthttp"
@@ -7,12 +7,12 @@ import (
 )
 
 func SocksDialer(proxyAddr string) fasthttp.DialFunc {
-	dialer, err := p.SOCKS5("tcp", proxyAddr, nil, p.Direct)
+	d, err := p.SOCKS5("tcp", proxyAddr, nil, p.Direct)
 
 	return func(addr string) (net.Conn, error) {
 		if err != nil {
 			return nil, err
 		}
-		return dialer.Dial("tcp", addr)
+		return d.Dial("tcp", addr)
 	}
 }

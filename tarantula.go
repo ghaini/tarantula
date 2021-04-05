@@ -10,7 +10,7 @@ import (
 
 	"github.com/ghaini/tarantula/constants"
 	"github.com/ghaini/tarantula/data"
-	"github.com/ghaini/tarantula/proxy"
+	"github.com/ghaini/tarantula/network"
 	"github.com/valyala/fasthttp"
 )
 
@@ -69,16 +69,20 @@ func (t *tarantula) SetRetry(number int) *tarantula {
 
 func (t *tarantula) HTTPProxy(proxyAddress string) *tarantula {
 	t.client = &fasthttp.Client{
-		Dial: proxy.HTTPProxyDialer(proxyAddress),
+		Dial: network.HTTPProxyDialer(proxyAddress),
 	}
 	return t
 }
 
 func (t *tarantula) SocksProxy(proxyAddress string) *tarantula {
 	t.client = &fasthttp.Client{
-		Dial: proxy.SocksDialer(proxyAddress),
+		Dial: network.SocksDialer(proxyAddress),
 	}
 	return t
+}
+
+func (t *tarantula) RandomDNSServer() {
+	t.client = &fasthttp.Client{Dial: network.DialerWithCustomDNSResolver()}
 }
 
 func (t *tarantula) WithBody() *tarantula {

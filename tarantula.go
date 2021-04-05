@@ -81,8 +81,9 @@ func (t *tarantula) SocksProxy(proxyAddress string) *tarantula {
 	return t
 }
 
-func (t *tarantula) RandomDNSServer() {
+func (t *tarantula) RandomDNSServer() *tarantula {
 	t.client = &fasthttp.Client{Dial: network.DialerWithCustomDNSResolver()}
+	return t
 }
 
 func (t *tarantula) WithBody() *tarantula {

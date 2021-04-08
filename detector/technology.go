@@ -7,6 +7,7 @@ import (
 	"github.com/ghaini/tarantula/constants"
 	"github.com/valyala/fasthttp"
 	"io"
+	"net/http"
 	"os"
 	"regexp"
 	"strings"
@@ -118,7 +119,7 @@ func (t *StringArray) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-func (t *Technology) Technology(url string, response []byte, headers *fasthttp.ResponseHeader) []Match {
+func (t *Technology) Technology(url string, response []byte, headers http.Header, cookies []*http.Cookie) []Match {
 	doc, err := goquery.NewDocumentFromReader(bytes.NewReader(response))
 	if err != nil {
 		return []Match{}
@@ -127,9 +128,9 @@ func (t *Technology) Technology(url string, response []byte, headers *fasthttp.R
 	var apps = make([]Match, 0)
 	var cookiesMap = make(map[string]string)
 
-	headers.VisitAllCookie(func(key, value []byte) {
-		cookiesMap[string(key)] = string(value)
-	})
+	for _, c := range cookies {
+		cookiesMap[c.Name] = c.Value
+	}
 
 	for appname, app := range t.appDefs.Apps {
 		findings := Match{
@@ -329,16 +330,22 @@ func (m *Match) updateVersion(version string) {
 	}
 }
 
-func (app *app) FindInHeaders(headers *fasthttp.ResponseHeader) (matches [][]string, version string) {
+func (app *app) FindInHeaders(headers http.Header) (matches [][]string, version string) {
 	var v string
+
 	for _, hre := range app.HeaderRegex {
-		header := string(headers.Peek(hre.Name))
-		if header == "" {
+		if headers.Get(hre.Name) == "" {
 			continue
 		}
-		if m, version := findMatches(header, []appRegexp{hre}); len(m) > 0 {
-			matches = append(matches, m...)
-			v = version
+		hk := http.CanonicalHeaderKey(hre.Name)
+		for _, headerValue := range headers[hk] {
+			if headerValue == "" {
+				continue
+			}
+			if m, version := findMatches(headerValue, []appRegexp{hre}); len(m) > 0 {
+				matches = append(matches, m...)
+				v = version
+			}
 		}
 	}
 	return matches, v

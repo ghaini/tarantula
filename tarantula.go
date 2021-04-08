@@ -1,8 +1,11 @@
 package tarantula
 
 import (
+	"crypto/tls"
 	"github.com/ghaini/tarantula/detector"
+	"io/ioutil"
 	"math/rand"
+	"net/http"
 	"strconv"
 	"strings"
 	"sync"
@@ -19,6 +22,7 @@ type tarantula struct {
 	ports              []int
 	subdomains         []string
 	client             *fasthttp.Client
+	client2            *http.Client
 	withBody           bool
 	withTitle          bool
 	withTechnology     bool
@@ -30,14 +34,29 @@ type tarantula struct {
 }
 
 func NewTarantula() *tarantula {
+	transport := &http.Transport{
+		MaxIdleConnsPerHost: -1,
+		TLSClientConfig: &tls.Config{
+			InsecureSkipVerify: true,
+		},
+		DisableKeepAlives: true,
+	}
+
+	client := &http.Client{
+		Transport: transport,
+		CheckRedirect: func(_ *http.Request, _ []*http.Request) error {
+			return http.ErrUseLastResponse // Tell the http client to not follow redirect
+		},
+	}
 	rand.Seed(time.Now().UTC().UnixNano())
 	return &tarantula{
-		thread:     1,
-		ports:      []int{443},
-		subdomains: nil,
-		client:     &fasthttp.Client{},
-		userAgents: data.UserAgents,
-		timeout:    5,
+		thread:             1,
+		ports:              []int{443},
+		subdomains:         nil,
+		client:             &fasthttp.Client{},
+		client2:            client,
+		userAgents:         data.UserAgents,
+		timeout:            5,
 		technologyDetector: detector.NewTechnology(),
 	}
 }
@@ -181,21 +200,22 @@ func (t *tarantula) GetAssetsChan(domain string, subdomains []string) chan Resul
 
 func (t *tarantula) doRequest(domain, protocol, subdomain string, port int, retry int, result chan<- Result) {
 	url := protocol + "://" + subdomain + ":" + strconv.Itoa(port)
-	req := fasthttp.AcquireRequest()
-	defer fasthttp.ReleaseRequest(req)
 
-	req.SetRequestURI(url)
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return
+	}
+	req.Close = true
+
 	// set headers
-	req.Header.SetUserAgent(t.userAgents[rand.Intn(len(t.userAgents))])
+	req.Header.Set("User-Agent", t.userAgents[rand.Intn(len(t.userAgents))])
 	req.Header.Set("ACCEPT", "\ttext/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9")
 	req.Header.Set("REFERER", "https://www.google.com/")
 	req.Header.Set("Accept-Charset", "utf-8")
 	req.Header.Set("origin", url)
 
-	resp := fasthttp.AcquireResponse()
-	defer fasthttp.ReleaseResponse(resp)
-	resp.SkipBody = !t.withBody && !t.withTitle && !t.withTechnology
-	err := t.client.DoTimeout(req, resp, time.Duration(t.timeout)*time.Second)
+	t.client2.Timeout = time.Duration(t.timeout) * time.Second
+	resp, err := t.client2.Do(req)
 	if err != nil {
 		if retry > 0 {
 			t.doRequest(domain, protocol, subdomain, port, retry-1, result)
@@ -208,17 +228,17 @@ func (t *tarantula) doRequest(domain, protocol, subdomain string, port int, retr
 		}
 	}
 
+	defer resp.Body.Close()
 	for _, statusCode := range t.filterStatusCodes {
-		if statusCode == resp.StatusCode() {
+		if statusCode == resp.StatusCode {
 			return
 		}
 	}
 
-	resp.StatusCode()
 	headers := make(map[string]string)
-	resp.Header.VisitAll(func(key, value []byte) {
-		headers[strings.ToLower(string(key))] = strings.ToLower(string(value))
-	})
+	for k, v := range resp.Header {
+		headers[strings.ToLower(k)] = strings.ToLower(v[0])
+	}
 
 	title := ""
 	if t.withTitle {
@@ -226,24 +246,27 @@ func (t *tarantula) doRequest(domain, protocol, subdomain string, port int, retr
 	}
 
 	body := ""
-	if t.withBody {
-		body = string(resp.Body())
-	}
-
+	//if t.withBody {
+	//	body = string(resp.Body())
+	//}
 	technologies := make(map[string]string)
-	if t.withTechnology {
-		matches := t.technologyDetector.Technology(url, resp.Body(), &resp.Header)
-		for _, match := range matches {
-			for _, cat := range match.CatNames {
-				cat = strings.ToLower(cat)
-				cat = strings.ReplaceAll(cat, " ", "-")
-				technologies[cat] = strings.ToLower(match.AppName)
+	bodyBytes, err := ioutil.ReadAll(resp.Body)
+	if err == nil {
+		if t.withTechnology {
+			resp.Cookies()
+			matches := t.technologyDetector.Technology(url, bodyBytes, resp.Header, resp.Cookies())
+			for _, match := range matches {
+				for _, cat := range match.CatNames {
+					cat = strings.ToLower(cat)
+					cat = strings.ReplaceAll(cat, " ", "-")
+					technologies[cat] = strings.ToLower(match.AppName)
+				}
 			}
 		}
 	}
 
 	result <- Result{
-		StatusCode:   resp.StatusCode(),
+		StatusCode:   resp.StatusCode,
 		Asset:        url,
 		Domain:       domain,
 		Body:         body,

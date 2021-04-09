@@ -200,6 +200,7 @@ func (t *tarantula) doRequest(domain, protocol, subdomain string, port int, retr
 
 	t.client.Timeout = time.Duration(t.timeout) * time.Second
 	resp, err := t.client.Do(req)
+	defer t.client.CloseIdleConnections()
 	if err != nil {
 		if retry > 0 {
 			t.doRequest(domain, protocol, subdomain, port, retry-1, result)

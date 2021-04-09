@@ -1,7 +1,6 @@
 package tarantula
 
 import (
-	"crypto/tls"
 	"github.com/ghaini/tarantula/detector"
 	"io/ioutil"
 	"math/rand"
@@ -14,15 +13,13 @@ import (
 	"github.com/ghaini/tarantula/constants"
 	"github.com/ghaini/tarantula/data"
 	"github.com/ghaini/tarantula/network"
-	"github.com/valyala/fasthttp"
 )
 
 type tarantula struct {
 	thread             int
 	ports              []int
 	subdomains         []string
-	client             *fasthttp.Client
-	client2            *http.Client
+	client             *http.Client
 	withBody           bool
 	withTitle          bool
 	withTechnology     bool
@@ -34,16 +31,8 @@ type tarantula struct {
 }
 
 func NewTarantula() *tarantula {
-	transport := &http.Transport{
-		MaxIdleConnsPerHost: -1,
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true,
-		},
-		DisableKeepAlives: true,
-	}
-
 	client := &http.Client{
-		Transport: transport,
+		Transport: network.DefaultTransport(nil),
 		CheckRedirect: func(_ *http.Request, _ []*http.Request) error {
 			return http.ErrUseLastResponse // Tell the http client to not follow redirect
 		},
@@ -53,8 +42,7 @@ func NewTarantula() *tarantula {
 		thread:             1,
 		ports:              []int{443},
 		subdomains:         nil,
-		client:             &fasthttp.Client{},
-		client2:            client,
+		client:             client,
 		userAgents:         data.UserAgents,
 		timeout:            5,
 		technologyDetector: detector.NewTechnology(),
@@ -86,22 +74,22 @@ func (t *tarantula) SetRetry(number int) *tarantula {
 	return t
 }
 
-func (t *tarantula) HTTPProxy(proxyAddress string) *tarantula {
-	t.client = &fasthttp.Client{
-		Dial: network.HTTPProxyDialer(proxyAddress),
-	}
-	return t
-}
-
-func (t *tarantula) SocksProxy(proxyAddress string) *tarantula {
-	t.client = &fasthttp.Client{
-		Dial: network.SocksDialer(proxyAddress),
-	}
-	return t
-}
+//func (t *tarantula) HTTPProxy(proxyAddress string) *tarantula {
+//	t.client = &fasthttp.Client{
+//		Dial: network.HTTPProxyDialer(proxyAddress),
+//	}
+//	return t
+//}
+//
+//func (t *tarantula) SocksProxy(proxyAddress string) *tarantula {
+//	t.client = &fasthttp.Client{
+//		Dial: network.SocksDialer(proxyAddress),
+//	}
+//	return t
+//}
 
 func (t *tarantula) RandomDNSServer() *tarantula {
-	t.client = &fasthttp.Client{Dial: network.DialerWithCustomDNSResolver()}
+	t.client.Transport = network.DefaultTransport(network.DialerWithCustomDNSResolver())
 	return t
 }
 
@@ -214,8 +202,8 @@ func (t *tarantula) doRequest(domain, protocol, subdomain string, port int, retr
 	req.Header.Set("Accept-Charset", "utf-8")
 	req.Header.Set("origin", url)
 
-	t.client2.Timeout = time.Duration(t.timeout) * time.Second
-	resp, err := t.client2.Do(req)
+	t.client.Timeout = time.Duration(t.timeout) * time.Second
+	resp, err := t.client.Do(req)
 	if err != nil {
 		if retry > 0 {
 			t.doRequest(domain, protocol, subdomain, port, retry-1, result)

@@ -1,7 +1,6 @@
 package tarantula
 
 import (
-	"github.com/ghaini/tarantula/detector"
 	"io/ioutil"
 	"math/rand"
 	"net/http"
@@ -12,6 +11,7 @@ import (
 
 	"github.com/ghaini/tarantula/constants"
 	"github.com/ghaini/tarantula/data"
+	"github.com/ghaini/tarantula/detector"
 	"github.com/ghaini/tarantula/network"
 )
 
@@ -74,19 +74,15 @@ func (t *tarantula) SetRetry(number int) *tarantula {
 	return t
 }
 
-//func (t *tarantula) HTTPProxy(proxyAddress string) *tarantula {
-//	t.client = &fasthttp.Client{
-//		Dial: network.HTTPProxyDialer(proxyAddress),
-//	}
-//	return t
-//}
-//
-//func (t *tarantula) SocksProxy(proxyAddress string) *tarantula {
-//	t.client = &fasthttp.Client{
-//		Dial: network.SocksDialer(proxyAddress),
-//	}
-//	return t
-//}
+func (t *tarantula) HTTPProxy(proxyAddress string) *tarantula {
+	t.client.Transport = network.DefaultTransport(network.HTTPProxyDialer(proxyAddress))
+	return t
+}
+
+func (t *tarantula) SocksProxy(proxyAddress string) *tarantula {
+	t.client.Transport = network.DefaultTransport(network.SocksDialer(proxyAddress))
+	return t
+}
 
 func (t *tarantula) RandomDNSServer() *tarantula {
 	t.client.Transport = network.DefaultTransport(network.DialerWithCustomDNSResolver())

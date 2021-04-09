@@ -28,7 +28,6 @@ func DialerWithCustomDNSResolver() func(ctx context.Context, network, addr strin
 				d := net.Dialer{
 				}
 				randomDnsServer := dnsServers[rand.Intn(len(dnsServers))]
-
 				return d.DialContext(ctx, "udp", randomDnsServer + ":53")
 			},
 		},

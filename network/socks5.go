@@ -1,18 +1,15 @@
 package network
 
 import (
-	"github.com/valyala/fasthttp"
+	"golang.org/x/net/context"
 	p "golang.org/x/net/proxy"
 	"net"
 )
 
-func SocksDialer(proxyAddr string) fasthttp.DialFunc {
-	d, err := p.SOCKS5("tcp", proxyAddr, nil, p.Direct)
-
-	return func(addr string) (net.Conn, error) {
-		if err != nil {
-			return nil, err
-		}
-		return d.Dial("tcp", addr)
+func SocksDialer(proxyAddr string) func(ctx context.Context, network, addr string) (net.Conn, error) {
+	d, _ := p.SOCKS5("tcp", proxyAddr, nil, p.Direct)
+	contextDialer := d.(p.ContextDialer)
+	return func(ctx context.Context, network, addr string) (net.Conn, error) {
+		return contextDialer.DialContext(context.Background(), "tcp", addr)
 	}
 }

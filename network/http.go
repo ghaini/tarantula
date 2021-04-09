@@ -2,33 +2,36 @@ package network
 
 import (
 	"bufio"
-	"github.com/valyala/fasthttp"
+	"context"
 	"net"
+	"net/http"
 )
 
-func HTTPProxyDialer(proxyAddr string) fasthttp.DialFunc {
-	return func(addr string) (net.Conn, error) {
-		conn, err := fasthttp.Dial(proxyAddr)
+func HTTPProxyDialer(proxyAddr string)  func(ctx context.Context, network, addr string) (net.Conn, error)  {
+	return func(ctx context.Context, network, addr string) (net.Conn, error) {
+		c, err := net.Dial("tcp", proxyAddr)
 		if err != nil {
 			return nil, err
 		}
 
-		req := "CONNECT " + addr + " HTTP/1.1\r\n"
-		// req += "Proxy-Authorization: xxx\r\n"
-		req += "\r\n"
-
-		if _, err := conn.Write([]byte(req)); err != nil {
+		req, err := http.NewRequest("CONNECT", addr, nil)
+		if err != nil {
+			c.Close()
+			return nil, err
+		}
+		req.Close = false
+		err = req.Write(c)
+		if err != nil {
+			c.Close()
 			return nil, err
 		}
 
-		res := fasthttp.AcquireResponse()
-		defer fasthttp.ReleaseResponse(res)
-
-		if err := res.Read(bufio.NewReader(conn)); err != nil {
-			conn.Close()
+		resp, err := http.ReadResponse(bufio.NewReader(c), req)
+		if err != nil {
+			c.Close()
 			return nil, err
 		}
-
-		return conn, nil
+		resp.Body.Close()
+		return c, nil
 	}
 }

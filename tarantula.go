@@ -203,6 +203,7 @@ func (t *tarantula) doRequest(domain, protocol, subdomain string, port int, retr
 	resp, err := t.client.Do(req)
 	defer t.client.CloseIdleConnections()
 	if err != nil {
+		log.Println(url, err)
 		if retry > 0 {
 			t.doRequest(domain, protocol, subdomain, port, retry-1, result)
 			return
@@ -215,7 +216,6 @@ func (t *tarantula) doRequest(domain, protocol, subdomain string, port int, retr
 	}
 
 	defer resp.Body.Close()
-	log.Println(url, resp.StatusCode)
 	for _, statusCode := range t.filterStatusCodes {
 		if statusCode == resp.StatusCode {
 			return

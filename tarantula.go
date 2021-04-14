@@ -2,6 +2,7 @@ package tarantula
 
 import (
 	"io/ioutil"
+	"log"
 	"math/rand"
 	"net/http"
 	"strconv"
@@ -214,6 +215,7 @@ func (t *tarantula) doRequest(domain, protocol, subdomain string, port int, retr
 	}
 
 	defer resp.Body.Close()
+	log.Println(url, resp.StatusCode)
 	for _, statusCode := range t.filterStatusCodes {
 		if statusCode == resp.StatusCode {
 			return

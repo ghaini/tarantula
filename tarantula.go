@@ -1,6 +1,7 @@
 package tarantula
 
 import (
+	"crypto/tls"
 	"io/ioutil"
 	"log"
 	"math/rand"
@@ -32,8 +33,13 @@ type tarantula struct {
 }
 
 func NewTarantula() *tarantula {
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{
+			InsecureSkipVerify: true,
+		},
+	}
 	client := &http.Client{
-		Transport: network.DefaultTransport(nil),
+		Transport: tr,
 		CheckRedirect: func(_ *http.Request, _ []*http.Request) error {
 			return http.ErrUseLastResponse // Tell the http client to not follow redirect
 		},

@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"math/rand"
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -237,7 +238,8 @@ func (t *tarantula) doRequest(domain, protocol, subdomain string, port int, retr
 		redirectedLocation := resp.Header.Get("Location")
 		redirectedLocationUrl := strings.TrimRight(redirectedLocation, "/")
 		domainWithoutSlash := strings.TrimRight(domain, "/")
-		if strings.HasSuffix(redirectedLocationUrl, domainWithoutSlash) {
+		match, _ := regexp.MatchString("https?://" + subdomain, redirectedLocationUrl)
+		if strings.HasSuffix(redirectedLocationUrl, domainWithoutSlash) && !match{
 			t.doRequest(domain, "", redirectedLocationUrl, 0, 0, false, result)
 		}
 	}

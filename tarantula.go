@@ -124,7 +124,7 @@ func (t *tarantula) GetAssets(domain string, subdomains []string) []Result {
 		wg.Add(1)
 		go func(result chan<- Result, input <-chan input, domain string, work int) {
 			for inp := range inputs {
-				t.doRequest(domain, constants.HTTPS, inp.Subdomain, inp.Port, t.retry, result)
+				t.doRequest(domain, constants.HTTPS, inp.Subdomain, inp.Port, t.retry, true, result)
 			}
 			wg.Done()
 		}(result, inputs, domain, i)

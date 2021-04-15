@@ -3,7 +3,6 @@ package tarantula
 import (
 	"crypto/tls"
 	"io/ioutil"
-	"log"
 	"math/rand"
 	"net/http"
 	"strconv"
@@ -164,7 +163,7 @@ func (t *tarantula) GetAssetsChan(domain string, subdomains []string) chan Resul
 		wg.Add(1)
 		go func(result chan<- Result, input <-chan input, domain string, work int) {
 			for inp := range inputs {
-				t.doRequest(domain, constants.HTTPS, inp.Subdomain, inp.Port, t.retry, result)
+				t.doRequest(domain, constants.HTTPS, inp.Subdomain, inp.Port, t.retry, true, result)
 			}
 			wg.Done()
 		}(result, inputs, domain, i)
@@ -189,8 +188,15 @@ func (t *tarantula) GetAssetsChan(domain string, subdomains []string) chan Resul
 	return result
 }
 
-func (t *tarantula) doRequest(domain, protocol, subdomain string, port int, retry int, result chan<- Result) {
-	url := protocol + "://" + subdomain + ":" + strconv.Itoa(port)
+func (t *tarantula) doRequest(domain, protocol, subdomain string, port int, retry int, canChangeProtocol bool, result chan<- Result) {
+	url := subdomain
+	if protocol != "" {
+		url = protocol + "://" + subdomain
+	}
+
+	if port > 0 {
+		url += ":" + strconv.Itoa(port)
+	}
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -209,12 +215,11 @@ func (t *tarantula) doRequest(domain, protocol, subdomain string, port int, retr
 	resp, err := t.client.Do(req)
 	defer t.client.CloseIdleConnections()
 	if err != nil {
-		log.Println(url, err)
-		if retry > 0 {
-			t.doRequest(domain, protocol, subdomain, port, retry-1, result)
+		if canChangeProtocol && retry > 0 {
+			t.doRequest(domain, protocol, subdomain, port, retry-1, true, result)
 			return
-		} else if protocol == constants.HTTPS {
-			t.doRequest(domain, constants.HTTP, subdomain, port, t.retry, result)
+		} else if canChangeProtocol && protocol == constants.HTTPS {
+			t.doRequest(domain, constants.HTTP, subdomain, port, t.retry, true, result)
 			return
 		} else {
 			return
@@ -225,6 +230,15 @@ func (t *tarantula) doRequest(domain, protocol, subdomain string, port int, retr
 	for _, statusCode := range t.filterStatusCodes {
 		if statusCode == resp.StatusCode {
 			return
+		}
+	}
+
+	if resp.StatusCode >= 300 && resp.StatusCode <= 399 {
+		redirectedLocation := resp.Header.Get("Location")
+		redirectedLocationUrl := strings.TrimRight(redirectedLocation, "/")
+		domainWithoutSlash := strings.TrimRight(domain, "/")
+		if strings.HasSuffix(redirectedLocationUrl, domainWithoutSlash) {
+			t.doRequest(domain, "", redirectedLocation, 0, 0, false, result)
 		}
 	}
 
@@ -246,15 +260,7 @@ func (t *tarantula) doRequest(domain, protocol, subdomain string, port int, retr
 	bodyBytes, err := ioutil.ReadAll(resp.Body)
 	if err == nil {
 		if t.withTechnology {
-			resp.Cookies()
-			matches := t.technologyDetector.Technology(url, bodyBytes, resp.Header, resp.Cookies())
-			for _, match := range matches {
-				for _, cat := range match.CatNames {
-					cat = strings.ToLower(cat)
-					cat = strings.ReplaceAll(cat, " ", "-")
-					technologies[cat] = strings.ToLower(match.AppName)
-				}
-			}
+			technologies = t.getTechnologyMap(url, bodyBytes, resp.Header, resp.Cookies())
 		}
 	}
 
@@ -267,4 +273,17 @@ func (t *tarantula) doRequest(domain, protocol, subdomain string, port int, retr
 		Title:        title,
 		Technologies: technologies,
 	}
+}
+
+func (t *tarantula) getTechnologyMap(url string, body []byte, headers http.Header, cookies []*http.Cookie) map[string]string {
+	technologies := make(map[string]string)
+	matches := t.technologyDetector.Technology(url, body, headers, cookies)
+	for _, match := range matches {
+		for _, cat := range match.CatNames {
+			cat = strings.ToLower(cat)
+			cat = strings.ReplaceAll(cat, " ", "-")
+			technologies[cat] = strings.ToLower(match.AppName)
+		}
+	}
+	return technologies
 }

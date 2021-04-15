@@ -238,7 +238,7 @@ func (t *tarantula) doRequest(domain, protocol, subdomain string, port int, retr
 		redirectedLocationUrl := strings.TrimRight(redirectedLocation, "/")
 		domainWithoutSlash := strings.TrimRight(domain, "/")
 		if strings.HasSuffix(redirectedLocationUrl, domainWithoutSlash) {
-			t.doRequest(domain, "", redirectedLocation, 0, 0, false, result)
+			t.doRequest(domain, "", redirectedLocationUrl, 0, 0, false, result)
 		}
 	}
 

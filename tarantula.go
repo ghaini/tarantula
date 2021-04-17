@@ -1,10 +1,10 @@
 package tarantula
 
 import (
-	"crypto/tls"
 	"io/ioutil"
 	"math/rand"
 	"net/http"
+	netUrl "net/url"
 	"regexp"
 	"strconv"
 	"strings"
@@ -33,13 +33,8 @@ type tarantula struct {
 }
 
 func NewTarantula() *tarantula {
-	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true,
-		},
-	}
 	client := &http.Client{
-		Transport: tr,
+		Transport: network.DefaultTransport(nil),
 		CheckRedirect: func(_ *http.Request, _ []*http.Request) error {
 			return http.ErrUseLastResponse // Tell the http client to not follow redirect
 		},
@@ -238,9 +233,19 @@ func (t *tarantula) doRequest(domain, protocol, subdomain string, port int, retr
 		redirectedLocation := resp.Header.Get("Location")
 		redirectedLocationUrl := strings.TrimRight(redirectedLocation, "/")
 		domainWithoutSlash := strings.TrimRight(domain, "/")
-		match, _ := regexp.MatchString("https?://" + subdomain, redirectedLocationUrl)
-		if strings.HasSuffix(redirectedLocationUrl, domainWithoutSlash) && !match{
-			t.doRequest(domain, "", redirectedLocationUrl, 0, 0, false, result)
+		match, _ := regexp.MatchString("https?://"+subdomain, redirectedLocationUrl)
+		if strings.HasSuffix(redirectedLocationUrl, domainWithoutSlash) && !match {
+			parse, err := netUrl.Parse(redirectedLocationUrl)
+			if err == nil && parse.Port() == "" {
+				if strings.HasPrefix(strings.TrimSpace(redirectedLocationUrl), "https") {
+					redirectedLocationUrl = redirectedLocationUrl + ":" + strconv.Itoa( 443)
+				} else {
+					redirectedLocationUrl = redirectedLocationUrl + ":" + strconv.Itoa( 80)
+				}
+			}
+			if err == nil {
+				t.doRequest(domain, "", redirectedLocationUrl, 0, 0, false, result)
+			}
 		}
 	}
 

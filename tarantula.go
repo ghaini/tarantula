@@ -254,20 +254,22 @@ func (t *tarantula) doRequest(domain, protocol, subdomain string, port int, retr
 		headers[strings.ToLower(k)] = strings.ToLower(v[0])
 	}
 
-	title := ""
-	if t.withTitle {
-		title = detector.ExtractTitle(resp)
-	}
 
 	body := ""
-	//if t.withBody {
-	//	body = string(resp.Body())
-	//}
+	title := ""
 	technologies := make(map[string]string)
 	bodyBytes, err := ioutil.ReadAll(resp.Body)
 	if err == nil {
+		if t.withTitle {
+			title = detector.ExtractTitle(bodyBytes, resp.Header)
+		}
+
 		if t.withTechnology {
 			technologies = t.getTechnologyMap(url, bodyBytes, resp.Header, resp.Cookies())
+		}
+
+		if t.withBody {
+			body = string(bodyBytes)
 		}
 	}
 

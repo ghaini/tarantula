@@ -1,7 +1,6 @@
 package detector
 
 import (
-	"io/ioutil"
 	"net/http"
 	"regexp"
 	"strings"
@@ -10,12 +9,8 @@ import (
 )
 
 // ExtractTitle from a response
-func ExtractTitle(r *http.Response) (title string) {
+func ExtractTitle(bodyBytes []byte, header http.Header) (title string) {
 	var re = regexp.MustCompile(`(?im)<\s*title.*>(.*?)<\s*/\s*title>`)
-	bodyBytes, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		return ""
-	}
 	bodyString := string(bodyBytes)
 	for _, match := range re.FindAllString(bodyString, -1) {
 		title = html.UnescapeString(trimTitleTags(match))
@@ -23,7 +18,7 @@ func ExtractTitle(r *http.Response) (title string) {
 	}
 
 	// Non UTF-8
-	contentType := r.Header.Get("Content-Type")
+	contentType := header.Get("Content-Type")
 	// special cases
 	if strings.Contains(string(contentType), "charset=GB2312") {
 		titleUtf8, err := Decodegbk([]byte(title))

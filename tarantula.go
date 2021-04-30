@@ -4,8 +4,6 @@ import (
 	"io/ioutil"
 	"math/rand"
 	"net/http"
-	netUrl "net/url"
-	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -35,8 +33,11 @@ type tarantula struct {
 func NewTarantula() *tarantula {
 	client := &http.Client{
 		Transport: network.DefaultTransport(nil),
-		CheckRedirect: func(_ *http.Request, _ []*http.Request) error {
-			return http.ErrUseLastResponse // Tell the http client to not follow redirect
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			if req.URL.Hostname() == via[0].URL.Hostname() {
+				return nil
+			}
+			return http.ErrUseLastResponse
 		},
 	}
 	rand.Seed(time.Now().UTC().UnixNano())
@@ -228,29 +229,6 @@ func (t tarantula) doRequest(domain, protocol, subdomain string, port int, retry
 			return
 		}
 	}
-	var responseWithRedirect *http.Response
-	if resp.StatusCode >= 300 && resp.StatusCode <= 399 {
-		redirectedLocation := resp.Header.Get("Location")
-		redirectedLocationUrl := strings.TrimRight(redirectedLocation, "/")
-		domainWithoutSlash := strings.TrimRight(domain, "/")
-		match, _ := regexp.MatchString("https?://"+subdomain, redirectedLocationUrl)
-		if strings.HasSuffix(redirectedLocationUrl, domainWithoutSlash) && !match {
-			parse, err := netUrl.Parse(redirectedLocationUrl)
-			if err == nil && parse.Port() == "" {
-				if strings.HasPrefix(strings.TrimSpace(redirectedLocationUrl), "https") {
-					redirectedLocationUrl = redirectedLocationUrl + ":" + strconv.Itoa(443)
-				} else {
-					redirectedLocationUrl = redirectedLocationUrl + ":" + strconv.Itoa(80)
-				}
-			}
-			if err == nil {
-				t.doRequest(domain, "", redirectedLocationUrl, 0, 0, false, result)
-			}
-		} else {
-			t.client.CheckRedirect = nil
-			responseWithRedirect, _ = t.client.Do(req)
-		}
-	}
 
 	headers := make(map[string]string)
 	for k, v := range resp.Header {
@@ -263,30 +241,31 @@ func (t tarantula) doRequest(domain, protocol, subdomain string, port int, retry
 	bodyResponse := resp.Body
 	headerResponse := resp.Header
 	cookieResponse := resp.Cookies()
-	if responseWithRedirect != nil {
-		bodyResponse = responseWithRedirect.Body
-		headerResponse = responseWithRedirect.Header
-		cookieResponse = responseWithRedirect.Cookies()
-	}
 	bodyBytes, err := ioutil.ReadAll(bodyResponse)
 
-	if err == nil {
-		if t.withTitle {
-			title = detector.ExtractTitle(bodyBytes, headerResponse)
-		}
+	if t.withTitle && err == nil {
+		title = detector.ExtractTitle(bodyBytes, headerResponse)
+	}
 
-		if t.withTechnology {
-			technologies = t.getTechnologyMap(url, bodyBytes, headerResponse, cookieResponse)
-		}
+	if t.withTechnology && err == nil {
+		technologies = t.getTechnologyMap(url, bodyBytes, headerResponse, cookieResponse)
+	}
 
-		if t.withBody {
-			body = string(bodyBytes)
+	if t.withBody && err == nil {
+		body = string(bodyBytes)
+	}
+
+	if resp.Request.URL.Hostname() != req.URL.Hostname() {
+		result <- Result{
+			StatusCode: 301,
+			Asset:      url,
+			Domain:     domain,
 		}
 	}
 
 	result <- Result{
 		StatusCode:   resp.StatusCode,
-		Asset:        url,
+		Asset:        detector.ConvertToUrlWithPort(resp.Request.URL),
 		Domain:       domain,
 		Body:         body,
 		Headers:      headers,

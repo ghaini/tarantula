@@ -258,7 +258,7 @@ func (t tarantula) doRequest(domain, protocol, subdomain string, port int, retry
 	if resp.Request.URL.Hostname() != req.URL.Hostname() {
 		result <- Result{
 			StatusCode: 301,
-			Asset:      url,
+			Asset:      detector.ConvertToUrlWithPort(req.URL),
 			Domain:     domain,
 		}
 	}

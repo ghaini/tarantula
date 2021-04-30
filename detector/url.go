@@ -10,10 +10,10 @@ import (
 func ConvertToUrlWithPort(url *url.URL) string {
 	fullUrl := ""
 	if url.Port() != "" {
-		return url.String()
+		return url.Scheme + "://" + url.Host
 	}
 
-	urlWithoutSlash := strings.TrimRight(url.String(), "/")
+	urlWithoutSlash := strings.TrimRight(url.Scheme+"://"+url.Host, "/")
 	if strings.HasPrefix(strings.TrimSpace(url.String()), constants.HTTPS) {
 		fullUrl = urlWithoutSlash + ":" + strconv.Itoa(443)
 	} else {

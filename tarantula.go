@@ -267,10 +267,12 @@ func (t tarantula) doRequest(domain, protocol, subdomain string, port int, retry
 	bodyResponse := resp.Body
 	headerResponse := resp.Header
 	cookieResponse := resp.Cookies()
+	ResponseUrl := resp.Request.URL.String()
 	if responseWithRedirect != nil {
 		bodyResponse = responseWithRedirect.Body
 		headerResponse = responseWithRedirect.Header
 		cookieResponse = responseWithRedirect.Cookies()
+		ResponseUrl = responseWithRedirect.Request.URL.String()
 	}
 	bodyBytes, err := ioutil.ReadAll(bodyResponse)
 
@@ -280,7 +282,7 @@ func (t tarantula) doRequest(domain, protocol, subdomain string, port int, retry
 		}
 
 		if t.withTechnology {
-			technologies = t.getTechnologyMap(url, bodyBytes, headerResponse, cookieResponse)
+			technologies = t.getTechnologyMap(ResponseUrl, bodyBytes, headerResponse, cookieResponse)
 		}
 
 		if t.withBody {

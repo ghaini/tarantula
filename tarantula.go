@@ -4,6 +4,7 @@ import (
 	"io/ioutil"
 	"math/rand"
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -20,6 +21,7 @@ type tarantula struct {
 	ports              []int
 	subdomains         []string
 	client             *http.Client
+	clientWithRedirect *http.Client
 	withBody           bool
 	withTitle          bool
 	withTechnology     bool
@@ -33,12 +35,14 @@ type tarantula struct {
 func NewTarantula() *tarantula {
 	client := &http.Client{
 		Transport: network.DefaultTransport(nil),
-		CheckRedirect: func(req *http.Request, via []*http.Request) error {
-			if req.URL.Hostname() == via[0].URL.Hostname() {
-				return nil
-			}
-			return http.ErrUseLastResponse
+		CheckRedirect: func(_ *http.Request, _ []*http.Request) error {
+			return http.ErrUseLastResponse // Tell the http client to not follow redirect
 		},
+	}
+
+	clientWithRedirect := &http.Client{
+		Transport:     network.DefaultTransport(nil),
+		CheckRedirect: nil,
 	}
 	rand.Seed(time.Now().UTC().UnixNano())
 	return &tarantula{
@@ -46,6 +50,7 @@ func NewTarantula() *tarantula {
 		ports:              []int{443},
 		subdomains:         nil,
 		client:             client,
+		clientWithRedirect: clientWithRedirect,
 		userAgents:         data.UserAgents,
 		timeout:            5,
 		technologyDetector: detector.NewTechnology(),
@@ -230,6 +235,27 @@ func (t tarantula) doRequest(domain, protocol, subdomain string, port int, retry
 		}
 	}
 
+	var responseWithRedirect *http.Response
+	if redirectedLocation, err := resp.Location(); err == nil {
+		match, _ := regexp.MatchString("https?://"+subdomain, redirectedLocation.String())
+		// check redirect to another port
+		if match && redirectedLocation.RequestURI() == "/" {
+			return
+		}
+
+		if match {
+			responseWithRedirect, _ = t.clientWithRedirect.Do(req)
+		} else {
+			redirectedLocationUrl := redirectedLocation.String()
+			if redirectedLocation.Scheme == constants.HTTPS && redirectedLocation.Port() == "" {
+				redirectedLocationUrl = redirectedLocation.String() + ":" + strconv.Itoa(443)
+			} else if redirectedLocation.Port() == ""  {
+				redirectedLocationUrl = redirectedLocation.String() + ":" + strconv.Itoa(80)
+			}
+			t.doRequest(domain, "", redirectedLocationUrl, 0, 0, false, result)
+		}
+	}
+
 	headers := make(map[string]string)
 	for k, v := range resp.Header {
 		headers[strings.ToLower(k)] = strings.ToLower(v[0])
@@ -241,31 +267,30 @@ func (t tarantula) doRequest(domain, protocol, subdomain string, port int, retry
 	bodyResponse := resp.Body
 	headerResponse := resp.Header
 	cookieResponse := resp.Cookies()
+	if responseWithRedirect != nil {
+		bodyResponse = responseWithRedirect.Body
+		headerResponse = responseWithRedirect.Header
+		cookieResponse = responseWithRedirect.Cookies()
+	}
 	bodyBytes, err := ioutil.ReadAll(bodyResponse)
 
-	if t.withTitle && err == nil {
-		title = detector.ExtractTitle(bodyBytes, headerResponse)
-	}
+	if err == nil {
+		if t.withTitle {
+			title = detector.ExtractTitle(bodyBytes, headerResponse)
+		}
 
-	if t.withTechnology && err == nil {
-		technologies = t.getTechnologyMap(url, bodyBytes, headerResponse, cookieResponse)
-	}
+		if t.withTechnology {
+			technologies = t.getTechnologyMap(url, bodyBytes, headerResponse, cookieResponse)
+		}
 
-	if t.withBody && err == nil {
-		body = string(bodyBytes)
-	}
-
-	if resp.Request.URL.Hostname() != req.URL.Hostname() {
-		result <- Result{
-			StatusCode: 301,
-			Asset:      detector.ConvertToUrlWithPort(req.URL),
-			Domain:     domain,
+		if t.withBody {
+			body = string(bodyBytes)
 		}
 	}
 
 	result <- Result{
 		StatusCode:   resp.StatusCode,
-		Asset:        detector.ConvertToUrlWithPort(resp.Request.URL),
+		Asset:        url,
 		Domain:       domain,
 		Body:         body,
 		Headers:      headers,

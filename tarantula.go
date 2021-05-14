@@ -4,6 +4,7 @@ import (
 	"io/ioutil"
 	"math/rand"
 	"net/http"
+	u "net/url"
 	"regexp"
 	"strconv"
 	"strings"
@@ -290,9 +291,16 @@ func (t tarantula) doRequest(domain, protocol, subdomain string, port int, retry
 		}
 	}
 
+	asset := url
+	parsedUrl, err := u.Parse(url)
+	if err == nil {
+		asset = parsedUrl.Scheme+ "://" + parsedUrl.Hostname() +":"+ parsedUrl.Port()
+	}
+
+
 	result <- Result{
 		StatusCode:   resp.StatusCode,
-		Asset:        url,
+		Asset:        asset,
 		Domain:       domain,
 		Body:         body,
 		Headers:      headers,

@@ -294,7 +294,7 @@ func (t tarantula) doRequest(domain, protocol, subdomain string, port int, retry
 	asset := url
 	parsedUrl, err := u.Parse(url)
 	if err == nil {
-		asset = parsedUrl.Scheme+ "://" + parsedUrl.Hostname() +":"+ parsedUrl.Port()
+		asset = detector.ConvertToUrlWithPort(parsedUrl)
 	}
 
 

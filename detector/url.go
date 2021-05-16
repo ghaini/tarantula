@@ -14,10 +14,9 @@ func ConvertToUrlWithPort(url *url.URL) string {
 	}
 
 	urlWithoutSlash := strings.TrimRight(url.Scheme+"://"+url.Host, "/")
-	if strings.HasPrefix(strings.TrimSpace(url.String()), constants.HTTPS) {
+	fullUrl = urlWithoutSlash + ":" + strconv.Itoa(80)
+	if url.Scheme == constants.HTTPS {
 		fullUrl = urlWithoutSlash + ":" + strconv.Itoa(443)
-	} else {
-		fullUrl = urlWithoutSlash + ":" + strconv.Itoa(80)
 	}
 	return fullUrl
 }

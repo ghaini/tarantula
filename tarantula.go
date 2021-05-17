@@ -247,12 +247,7 @@ func (t tarantula) doRequest(domain, protocol, subdomain string, port int, retry
 		if match {
 			responseWithRedirect, _ = t.clientWithRedirect.Do(req)
 		} else {
-			redirectedLocationUrl := redirectedLocation.String()
-			if redirectedLocation.Scheme == constants.HTTPS && redirectedLocation.Port() == "" {
-				redirectedLocationUrl = redirectedLocation.String() + ":" + strconv.Itoa(443)
-			} else if redirectedLocation.Port() == ""  {
-				redirectedLocationUrl = redirectedLocation.String() + ":" + strconv.Itoa(80)
-			}
+			redirectedLocationUrl := detector.ConvertToUrlWithPort(redirectedLocation)
 			t.doRequest(domain, "", redirectedLocationUrl, 0, 0, false, result)
 		}
 	}
@@ -296,7 +291,6 @@ func (t tarantula) doRequest(domain, protocol, subdomain string, port int, retry
 	if err == nil {
 		asset = detector.ConvertToUrlWithPort(parsedUrl)
 	}
-
 
 	result <- Result{
 		StatusCode:   resp.StatusCode,

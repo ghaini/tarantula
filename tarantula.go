@@ -249,7 +249,9 @@ func (t tarantula) doRequest(domain, protocol, subdomain string, port int, retry
 		} else {
 			redirectedLocationUrl := detector.ConvertToUrlWithPort(redirectedLocation)
 			if strings.Contains(redirectedLocationUrl, domain) {
-				t.doRequest(domain, "", redirectedLocationUrl, 0, 0, false, result)
+				parsedRedirectedLocationUrl, _ := u.Parse(redirectedLocationUrl)
+				redirectedLocationUrlPort, _ := strconv.Atoi(parsedRedirectedLocationUrl.Port())
+				t.doRequest(domain, parsedRedirectedLocationUrl.Scheme, parsedRedirectedLocationUrl.Hostname(), redirectedLocationUrlPort, 0, false, result)
 			}
 		}
 	}

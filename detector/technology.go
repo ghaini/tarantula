@@ -127,7 +127,7 @@ func (t *Technology) Technology(url string, response []byte, headers http.Header
 
 	var apps = make([]Match, 0)
 	var cookiesMap = make(map[string]string)
-
+	responseString := string(response)
 	for _, c := range cookies {
 		cookiesMap[c.Name] = c.Value
 	}
@@ -140,7 +140,7 @@ func (t *Technology) Technology(url string, response []byte, headers http.Header
 		}
 
 		// check raw html
-		if m, v := findMatches(string(response), app.HTMLRegex); len(m) > 0 {
+		if m, v := findMatches(responseString, app.HTMLRegex); len(m) > 0 {
 			findings.Matches = append(findings.Matches, m...)
 			findings.updateVersion(v)
 		}

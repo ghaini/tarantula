@@ -301,7 +301,7 @@ func (t tarantula) doRequest(domain, protocol, subdomain string, port int, retry
 	}
 
 	result <- Result{
-		StatusCode:   resp.StatusCode,
+		StatusCode:   statusCode,
 		Asset:        asset,
 		Domain:       domain,
 		Body:         body,

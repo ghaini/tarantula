@@ -10,7 +10,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-	"fmt"
 
 	"github.com/ghaini/tarantula/constants"
 	"github.com/ghaini/tarantula/data"

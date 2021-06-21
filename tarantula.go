@@ -10,6 +10,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"fmt"
 
 	"github.com/ghaini/tarantula/constants"
 	"github.com/ghaini/tarantula/data"
@@ -231,6 +232,7 @@ func (t tarantula) doRequest(domain, protocol, subdomain string, port int, retry
 	}
 
 	bodyResponse := resp.Body
+	bodyBytes, readErr := ioutil.ReadAll(bodyResponse)
 	headerResponse := resp.Header
 	cookieResponse := resp.Cookies()
 	ResponseUrl := resp.Request.URL.String()
@@ -276,13 +278,13 @@ func (t tarantula) doRequest(domain, protocol, subdomain string, port int, retry
 	technologies := make(map[string]string)
 	if responseWithRedirect != nil {
 		bodyResponse = responseWithRedirect.Body
+		bodyBytes, readErr = ioutil.ReadAll(bodyResponse)
 		headerResponse = responseWithRedirect.Header
 		cookieResponse = responseWithRedirect.Cookies()
 		ResponseUrl = responseWithRedirect.Request.URL.String()
 	}
-	bodyBytes, err := ioutil.ReadAll(bodyResponse)
 
-	if err == nil {
+	if readErr == nil {
 		if t.withTitle {
 			title = detector.ExtractTitle(bodyBytes, headerResponse)
 		}

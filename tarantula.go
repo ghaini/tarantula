@@ -210,6 +210,7 @@ func (t tarantula) doRequest(domain, protocol, subdomain string, port int, retry
 	// set headers
 	req.Header.Set("User-Agent", t.userAgents[rand.Intn(len(t.userAgents))])
 	req.Header.Set("ACCEPT", "\ttext/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9")
+	req.Header.Set("accept-language", "en-US,en;q=0.9,ar;q=0.8,es;q=0.7,fa;q=0.6,fr;q=0.5,ja;q=0.4,ms;q=0.3,nl;q=0.2,pt;q=0.1,ru;q=0.1")
 	req.Header.Set("REFERER", "https://www.google.com/")
 	req.Header.Set("Accept-Charset", "utf-8")
 	req.Header.Set("origin", url)
@@ -229,27 +230,35 @@ func (t tarantula) doRequest(domain, protocol, subdomain string, port int, retry
 		}
 	}
 
-	defer resp.Body.Close()
-	for _, statusCode := range t.filterStatusCodes {
-		if statusCode == resp.StatusCode {
+	bodyResponse := resp.Body
+	bodyBytes, readErr := ioutil.ReadAll(bodyResponse)
+	headerResponse := resp.Header
+	cookieResponse := resp.Cookies()
+	ResponseUrl := resp.Request.URL.String()
+	statusCode := resp.StatusCode
+	for _, sc:= range t.filterStatusCodes {
+		if sc == statusCode {
 			return
 		}
 	}
+	redirectedLocation, err := resp.Location();
+	resp.Body.Close()
 
 	var responseWithRedirect *http.Response
-	if redirectedLocation, err := resp.Location(); err == nil {
+	if err == nil {
 		match, _ := regexp.MatchString("https?://"+subdomain, redirectedLocation.String())
-		// check redirect to another port
-		if match && redirectedLocation.RequestURI() == "/" {
-			return
-		}
 
 		if match {
-			responseWithRedirect, _ = t.clientWithRedirect.Do(req)
+			responseWithRedirect, err = t.clientWithRedirect.Do(req)
+			if err == nil {
+				defer responseWithRedirect.Body.Close()
+			}
 		} else {
 			redirectedLocationUrl := detector.ConvertToUrlWithPort(redirectedLocation)
 			if strings.Contains(redirectedLocationUrl, domain) {
-				t.doRequest(domain, "", redirectedLocationUrl, 0, 0, false, result)
+				parsedRedirectedLocationUrl, _ := u.Parse(redirectedLocationUrl)
+				redirectedLocationUrlPort, _ := strconv.Atoi(parsedRedirectedLocationUrl.Port())
+				t.doRequest(domain, parsedRedirectedLocationUrl.Scheme, parsedRedirectedLocationUrl.Hostname(), redirectedLocationUrlPort, 0, false, result)
 			}
 		}
 	}
@@ -262,19 +271,15 @@ func (t tarantula) doRequest(domain, protocol, subdomain string, port int, retry
 	body := ""
 	title := ""
 	technologies := make(map[string]string)
-	bodyResponse := resp.Body
-	headerResponse := resp.Header
-	cookieResponse := resp.Cookies()
-	ResponseUrl := resp.Request.URL.String()
 	if responseWithRedirect != nil {
 		bodyResponse = responseWithRedirect.Body
+		bodyBytes, readErr = ioutil.ReadAll(bodyResponse)
 		headerResponse = responseWithRedirect.Header
 		cookieResponse = responseWithRedirect.Cookies()
 		ResponseUrl = responseWithRedirect.Request.URL.String()
 	}
-	bodyBytes, err := ioutil.ReadAll(bodyResponse)
 
-	if err == nil {
+	if readErr == nil {
 		if t.withTitle {
 			title = detector.ExtractTitle(bodyBytes, headerResponse)
 		}
@@ -295,7 +300,7 @@ func (t tarantula) doRequest(domain, protocol, subdomain string, port int, retry
 	}
 
 	result <- Result{
-		StatusCode:   resp.StatusCode,
+		StatusCode:   statusCode,
 		Asset:        asset,
 		Domain:       domain,
 		Body:         body,

@@ -236,12 +236,12 @@ func (t tarantula) doRequest(domain, protocol, subdomain string, port int, retry
 	cookieResponse := resp.Cookies()
 	ResponseUrl := resp.Request.URL.String()
 	statusCode := resp.StatusCode
-	for _, sc:= range t.filterStatusCodes {
+	for _, sc := range t.filterStatusCodes {
 		if sc == statusCode {
 			return
 		}
 	}
-	redirectedLocation, err := resp.Location();
+	redirectedLocation, err := resp.Location()
 	resp.Body.Close()
 
 	var responseWithRedirect *http.Response
@@ -321,4 +321,19 @@ func (t *tarantula) getTechnologyMap(url string, body []byte, headers http.Heade
 		}
 	}
 	return technologies
+}
+
+func (t *tarantula) GetAssetStatusCode(asset string, retryCount int) int {
+	result := make(chan Result)
+	statusCode := 0
+	for i := 0; i < retryCount; i++ {
+		t.doRequest("", "", asset, 0, 0, false, result)
+		res := <-result
+		if statusCode != 0 && statusCode != res.StatusCode {
+			return 0
+		}
+		statusCode = res.StatusCode
+	}
+
+	return statusCode
 }

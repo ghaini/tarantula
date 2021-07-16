@@ -324,15 +324,27 @@ func (t *tarantula) getTechnologyMap(url string, body []byte, headers http.Heade
 }
 
 func (t *tarantula) GetAssetStatusCode(asset string, retryCount int) int {
+	var wg sync.WaitGroup
 	result := make(chan Result)
 	statusCode := 0
+	wg.Add(retryCount)
 	for i := 0; i < retryCount; i++ {
-		t.doRequest("", "", asset, 0, 0, false, result)
-		res := <-result
-		if statusCode != 0 && statusCode != res.StatusCode {
+		go func() {
+			t.doRequest("", "", asset, 0, 0, false, result)
+			wg.Done()
+		}()
+	}
+
+	go func() {
+		wg.Wait()
+		close(result)
+	}()
+
+	for r := range result {
+		if statusCode != 0 && r.StatusCode != statusCode {
 			return 0
 		}
-		statusCode = res.StatusCode
+		statusCode = r.StatusCode
 	}
 
 	return statusCode

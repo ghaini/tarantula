@@ -31,18 +31,20 @@ type tarantula struct {
 	retry              int
 	filterStatusCodes  []int
 	technologyDetector *detector.Technology
+	resolver           *network.Resolver
 }
 
 func NewTarantula() *tarantula {
+	resolver := network.NewResolver()
 	client := &http.Client{
-		Transport: network.DefaultTransport(nil),
+		Transport: resolver.DefaultTransport(nil),
 		CheckRedirect: func(_ *http.Request, _ []*http.Request) error {
 			return http.ErrUseLastResponse // Tell the http client to not follow redirect
 		},
 	}
 
 	clientWithRedirect := &http.Client{
-		Transport:     network.DefaultTransport(nil),
+		Transport:     resolver.DefaultTransport(nil),
 		CheckRedirect: nil,
 	}
 	rand.Seed(time.Now().UTC().UnixNano())
@@ -55,6 +57,7 @@ func NewTarantula() *tarantula {
 		userAgents:         data.UserAgents,
 		timeout:            5,
 		technologyDetector: detector.NewTechnology(),
+		resolver: resolver,
 	}
 }
 
@@ -84,17 +87,17 @@ func (t *tarantula) SetRetry(number int) *tarantula {
 }
 
 func (t *tarantula) HTTPProxy(proxyAddress string) *tarantula {
-	t.client.Transport = network.DefaultTransport(network.HTTPProxyDialer(proxyAddress))
+	t.client.Transport = t.resolver.DefaultTransport(network.HTTPProxyDialer(proxyAddress))
 	return t
 }
 
 func (t *tarantula) SocksProxy(proxyAddress string) *tarantula {
-	t.client.Transport = network.DefaultTransport(network.SocksDialer(proxyAddress))
+	t.client.Transport = t.resolver.DefaultTransport(network.SocksDialer(proxyAddress))
 	return t
 }
 
 func (t *tarantula) RandomDNSServer() *tarantula {
-	t.client.Transport = network.DefaultTransport(network.DialerWithCustomDNSResolver())
+	t.client.Transport = t.resolver.DefaultTransport(t.resolver.DialerWithCustomDNSResolver())
 	return t
 }
 

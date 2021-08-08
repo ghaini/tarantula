@@ -43,7 +43,7 @@ func NewResolver() *Resolver  {
 	}
 	defer dnsServersFile.Close()
 
-	return &Resolver{}
+	return resolver
 }
 
 func (r *Resolver) DialerWithCustomDNSResolver() func(ctx context.Context, network, addr string) (net.Conn, error) {

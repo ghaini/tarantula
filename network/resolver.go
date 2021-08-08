@@ -23,7 +23,7 @@ func NewResolver() *Resolver  {
 	if err != nil {
 		return nil
 	}
-	if _, err := os.Stat(home + "/.tarantula/technologies.json"); os.IsNotExist(err) {
+	if _, err := os.Stat(home + "/.tarantula/resolvers.txt"); os.IsNotExist(err) {
 		getResolverListFile()
 	}
 
@@ -32,7 +32,7 @@ func NewResolver() *Resolver  {
 		return nil
 	}
 	resolver := &Resolver{}
-	dnsServersFile, err := os.Open(home + "/.tarantula/technologies.json")
+	dnsServersFile, err := os.Open(home + "/.tarantula/resolvers.txt")
 	if err != nil {
 		return nil
 	}
@@ -115,7 +115,7 @@ func getResolverListFile() error {
 	}
 
 	defer appsFile.Close()
-	_, resp, err := fasthttp.Get(nil, constants.TechnologiesFileAddress)
+	_, resp, err := fasthttp.Get(nil, constants.DNSServerList)
 	if err != nil {
 		return err
 	}

@@ -7,27 +7,53 @@ import (
 	"github.com/ghaini/tarantula/constants"
 	"github.com/valyala/fasthttp"
 	"golang.org/x/net/context"
+	"io"
 	"math/rand"
 	"net"
 	"net/http"
+	"os"
 )
 
-func DialerWithCustomDNSResolver() func(ctx context.Context, network, addr string) (net.Conn, error) {
-	var dnsServers []string
-	_, body, _ := fasthttp.Get(nil, constants.DNSServerList)
-	r := bytes.NewReader(body)
-	scanner := bufio.NewScanner(r)
-	for scanner.Scan() {
-		dnsServers = append(dnsServers, scanner.Text())
+type Resolver struct {
+	DNSServers []string
+}
+
+func NewResolver() *Resolver  {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return nil
+	}
+	if _, err := os.Stat(home + "/.tarantula/resolvers.txt"); os.IsNotExist(err) {
+		getResolverListFile()
 	}
 
+	home, err = os.UserHomeDir()
+	if err != nil {
+		return nil
+	}
+	resolver := &Resolver{}
+	dnsServersFile, err := os.Open(home + "/.tarantula/resolvers.txt")
+	if err != nil {
+		return nil
+	}
+
+	scanner := bufio.NewScanner(dnsServersFile)
+	for scanner.Scan() {
+		resolver.DNSServers = append(resolver.DNSServers, scanner.Text())
+	}
+	defer dnsServersFile.Close()
+
+	return resolver
+}
+
+func (r *Resolver) DialerWithCustomDNSResolver() func(ctx context.Context, network, addr string) (net.Conn, error) {
 	dialer := &net.Dialer{
 		Resolver: &net.Resolver{
 			PreferGo: true,
 			Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
 				d := net.Dialer{
 				}
-				randomDnsServer := dnsServers[rand.Intn(len(dnsServers))]
+				randomDnsServer := r.DNSServers[rand.Intn(len(r.DNSServers))]
 				return d.DialContext(ctx, "udp", randomDnsServer+":53")
 			},
 		},
@@ -40,7 +66,7 @@ func DialerWithCustomDNSResolver() func(ctx context.Context, network, addr strin
 	return dialContext
 }
 
-func DefaultTransport(dialContext func(ctx context.Context, network, addr string) (net.Conn, error)) *http.Transport {
+func (r *Resolver) DefaultTransport(dialContext func(ctx context.Context, network, addr string) (net.Conn, error)) *http.Transport {
 	transport := &http.Transport{
 		DialContext:         dialContext,
 		MaxIdleConnsPerHost: -1,
@@ -74,4 +100,31 @@ func DefaultTransport(dialContext func(ctx context.Context, network, addr string
 		DisableKeepAlives: true,
 	}
 	return transport
+}
+
+func getResolverListFile() error {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return err
+	}
+
+	_ = os.MkdirAll(home+"/.tarantula", 0755)
+	appsFile, err := os.Create(home + "/.tarantula/resolvers.txt")
+	if err != nil {
+		return err
+	}
+
+	defer appsFile.Close()
+	_, resp, err := fasthttp.Get(nil, constants.DNSServerList)
+	if err != nil {
+		return err
+	}
+
+	r := bytes.NewReader(resp)
+	_, err = io.Copy(appsFile, r)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

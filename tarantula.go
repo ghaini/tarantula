@@ -1,6 +1,7 @@
 package tarantula
 
 import (
+	"context"
 	"io/ioutil"
 	"math/rand"
 	"net/http"
@@ -10,8 +11,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-	"context"
-
 
 	"github.com/ghaini/tarantula/constants"
 	"github.com/ghaini/tarantula/data"
@@ -254,6 +253,7 @@ func (t tarantula) doRequest(domain, protocol, subdomain string, port int, retry
 		match, _ := regexp.MatchString("https?://"+subdomain, redirectedLocation.String())
 
 		if match {
+			t.clientWithRedirect.Timeout = time.Duration(t.timeout) * time.Second
 			responseWithRedirect, err = t.clientWithRedirect.Do(req)
 			if err == nil {
 				defer responseWithRedirect.Body.Close()

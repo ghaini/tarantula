@@ -2,6 +2,7 @@ package tarantula
 
 import (
 	"context"
+	"fmt"
 	"io/ioutil"
 	"math/rand"
 	"net/http"

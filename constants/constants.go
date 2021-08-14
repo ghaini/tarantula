@@ -11,5 +11,5 @@ const DNSServerList = "https://raw.githubusercontent.com/ghaini/tarantula/master
 
 var PortsProtocols = map[int]string{
 	80: HTTP,
-	443: HTTP,
+	443: HTTPS,
 }

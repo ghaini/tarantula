@@ -218,7 +218,7 @@ func (t tarantula) doRequest(domain, protocol, subdomain string, port int, retry
 	req.Header.Set("User-Agent", t.userAgents[rand.Intn(len(t.userAgents))])
 	req.Header.Set("ACCEPT", "\ttext/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9")
 	req.Header.Set("accept-language", "en-US,en;q=0.9,ar;q=0.8,es;q=0.7,fa;q=0.6,fr;q=0.5,ja;q=0.4,ms;q=0.3,nl;q=0.2,pt;q=0.1,ru;q=0.1")
-	req.Header.Set("REFERER", "https://www.google.com/")
+	req.Header.Set("REFERER", url)
 	req.Header.Set("Accept-Charset", "utf-8")
 	req.Header.Set("origin", url)
 

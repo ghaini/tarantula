@@ -162,7 +162,6 @@ func (t *tarantula) GetAssets(domain string, subdomains []string) []Result {
 }
 
 func (t *tarantula) GetAssetsChan(domain string, subdomains []string) chan Result {
-
 	var wg sync.WaitGroup
 	result := make(chan Result, 100)
 	inputs := make(chan input)
@@ -203,6 +202,10 @@ func (t tarantula) doRequest(domain, protocol, subdomain string, port int, retry
 
 	if port > 0 {
 		url += ":" + strconv.Itoa(port)
+		if protocol, ok := constants.PortsProtocols[port]; ok {
+			url = protocol + "://" + subdomain
+			canChangeProtocol = false
+		}
 	}
 
 	req, err := http.NewRequest("GET", url, nil)

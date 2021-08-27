@@ -30,7 +30,7 @@ type tarantula struct {
 	userAgents         []string
 	timeout            int
 	retry              int
-	filterStatusCodes  []int
+	filterStatusCodes  []string
 	technologyDetector *detector.Technology
 	resolver           *network.Resolver
 }
@@ -122,7 +122,7 @@ func (t *tarantula) WithTechnology() *tarantula {
 	return t
 }
 
-func (t *tarantula) FilterStatusCode(codes []int) *tarantula {
+func (t *tarantula) FilterStatusCode(codes []string) *tarantula {
 	t.filterStatusCodes = codes
 	return t
 }
@@ -248,11 +248,20 @@ func (t tarantula) doRequest(domain, protocol, subdomain string, port int, retry
 	cookieResponse := resp.Cookies()
 	ResponseUrl := resp.Request.URL.String()
 	statusCode := resp.StatusCode
+	statusCodeStr := strconv.Itoa(resp.StatusCode)
+	matchStatusCount := 0
 	for _, sc := range t.filterStatusCodes {
-		if sc == statusCode {
+		for i:=0;i< len(statusCodeStr); i++ {
+			if sc[i] == statusCodeStr[i] || string(sc[i]) == "x" {
+				matchStatusCount++
+			}
+		}
+
+		if len(statusCodeStr) == matchStatusCount {
 			return
 		}
 	}
+
 	redirectedLocation, err := resp.Location()
 	resp.Body.Close()
 

@@ -249,15 +249,12 @@ func (t tarantula) doRequest(domain, protocol, subdomain string, port int, retry
 	ResponseUrl := resp.Request.URL.String()
 	statusCode := resp.StatusCode
 	statusCodeStr := strconv.Itoa(resp.StatusCode)
-	matchStatusCount := 0
 	for _, sc := range t.filterStatusCodes {
-		for i:=0;i< len(statusCodeStr); i++ {
-			if sc[i] == statusCodeStr[i] || string(sc[i]) == "x" {
-				matchStatusCount++
-			}
+		if strings.HasSuffix(sc, "xx") && sc[0] == statusCodeStr[0] && !strings.HasSuffix(statusCodeStr, "00"){
+			return
 		}
 
-		if len(statusCodeStr) == matchStatusCount {
+		if sc == statusCodeStr {
 			return
 		}
 	}

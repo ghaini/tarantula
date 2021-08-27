@@ -98,7 +98,12 @@ func (t *tarantula) SocksProxy(proxyAddress string) *tarantula {
 }
 
 func (t *tarantula) RandomDNSServer() *tarantula {
-	t.client.Transport = t.resolver.DefaultTransport(t.resolver.DialerWithCustomDNSResolver())
+	t.client.Transport = t.resolver.DefaultTransport(t.resolver.DialerWithRandomDNSResolver())
+	return t
+}
+
+func (t *tarantula) SetDNSServer(dnsServers []string) *tarantula {
+	t.client.Transport = t.resolver.DefaultTransport(t.resolver.DialerWithCustomDNSResolver(dnsServers))
 	return t
 }
 

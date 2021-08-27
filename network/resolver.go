@@ -46,7 +46,7 @@ func NewResolver() *Resolver  {
 	return resolver
 }
 
-func (r *Resolver) DialerWithCustomDNSResolver() func(ctx context.Context, network, addr string) (net.Conn, error) {
+func (r *Resolver) DialerWithRandomDNSResolver() func(ctx context.Context, network, addr string) (net.Conn, error) {
 	dialer := &net.Dialer{
 		Resolver: &net.Resolver{
 			PreferGo: true,
@@ -54,6 +54,26 @@ func (r *Resolver) DialerWithCustomDNSResolver() func(ctx context.Context, netwo
 				d := net.Dialer{
 				}
 				randomDnsServer := r.DNSServers[rand.Intn(len(r.DNSServers))]
+				return d.DialContext(ctx, "udp", randomDnsServer+":53")
+			},
+		},
+	}
+
+	dialContext := func(ctx context.Context, network, addr string) (net.Conn, error) {
+		return dialer.DialContext(ctx, network, addr)
+	}
+
+	return dialContext
+}
+
+func (r *Resolver) DialerWithCustomDNSResolver(dnsServers []string) func(ctx context.Context, network, addr string) (net.Conn, error) {
+	dialer := &net.Dialer{
+		Resolver: &net.Resolver{
+			PreferGo: true,
+			Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
+				d := net.Dialer{
+				}
+				randomDnsServer := dnsServers[rand.Intn(len(dnsServers))]
 				return d.DialContext(ctx, "udp", randomDnsServer+":53")
 			},
 		},

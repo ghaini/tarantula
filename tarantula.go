@@ -32,7 +32,7 @@ type tarantula struct {
 	timeout            int
 	retry              int
 	filterStatusCodes  []string
-	filterIPs          []string
+	filterIPsMap       map[string]struct{}
 	technologyDetector *detector.Technology
 	resolver           *network.Resolver
 }
@@ -130,7 +130,12 @@ func (t *tarantula) FilterStatusCode(codes []string) *tarantula {
 }
 
 func (t *tarantula) FilterIPs(ips []string) *tarantula {
-	t.filterIPs = ips
+	filterIpsMap := make(map[string]struct{})
+	for _, ip := range ips {
+		filterIpsMap[strings.TrimSpace(ip)] = struct{}{}
+	}
+
+	t.filterIPsMap = filterIpsMap
 	return t
 }
 
@@ -236,10 +241,10 @@ func (t tarantula) doRequest(domain, protocol, subdomain string, port int, retry
 
 	var ip string
 	portDetectorRegex := regexp.MustCompile(":.+$")
-	if len(t.filterIPs) > 0 {
+	if len(t.filterIPsMap) > 0 {
 		trace := &httptrace.ClientTrace{
 			GotConn: func(connInfo httptrace.GotConnInfo) {
-				ip = portDetectorRegex.ReplaceAllString(strings.TrimSpace(connInfo.Conn.RemoteAddr().String()),"")
+				ip = portDetectorRegex.ReplaceAllString(strings.TrimSpace(connInfo.Conn.RemoteAddr().String()), "")
 			},
 		}
 
@@ -278,11 +283,14 @@ func (t tarantula) doRequest(domain, protocol, subdomain string, port int, retry
 		}
 	}
 
-
 	for _, filterIp := range t.filterIPs {
 		if ip == strings.TrimSpace(filterIp) {
 			return
 		}
+	}
+
+	if _, exists := t.filterIPsMap[ip]; exists {
+		return
 	}
 
 	redirectedLocation, err := resp.Location()

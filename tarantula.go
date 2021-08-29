@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"math/rand"
 	"net/http"
+	"net/http/httptrace"
 	u "net/url"
 	"regexp"
 	"strconv"
@@ -31,6 +32,7 @@ type tarantula struct {
 	timeout            int
 	retry              int
 	filterStatusCodes  []string
+	filterIPs          []string
 	technologyDetector *detector.Technology
 	resolver           *network.Resolver
 }
@@ -58,7 +60,7 @@ func NewTarantula() *tarantula {
 		userAgents:         data.UserAgents,
 		timeout:            5,
 		technologyDetector: detector.NewTechnology(),
-		resolver: resolver,
+		resolver:           resolver,
 	}
 }
 
@@ -124,6 +126,11 @@ func (t *tarantula) WithTechnology() *tarantula {
 
 func (t *tarantula) FilterStatusCode(codes []string) *tarantula {
 	t.filterStatusCodes = codes
+	return t
+}
+
+func (t *tarantula) FilterIPs(ips []string) *tarantula {
+	t.filterIPs = ips
 	return t
 }
 
@@ -227,6 +234,18 @@ func (t tarantula) doRequest(domain, protocol, subdomain string, port int, retry
 	req.Header.Set("Accept-Charset", "utf-8")
 	req.Header.Set("origin", url)
 
+	var ip string
+	portDetectorRegex := regexp.MustCompile(":.+$")
+	if len(t.filterIPs) > 0 {
+		trace := &httptrace.ClientTrace{
+			GotConn: func(connInfo httptrace.GotConnInfo) {
+				ip = portDetectorRegex.ReplaceAllString(strings.TrimSpace(connInfo.Conn.RemoteAddr().String()),"")
+			},
+		}
+
+		req = req.WithContext(httptrace.WithClientTrace(req.Context(), trace))
+	}
+
 	t.client.Timeout = time.Duration(t.timeout) * time.Second
 	resp, err := t.client.Do(req)
 	defer t.client.CloseIdleConnections()
@@ -250,11 +269,18 @@ func (t tarantula) doRequest(domain, protocol, subdomain string, port int, retry
 	statusCode := resp.StatusCode
 	statusCodeStr := strconv.Itoa(resp.StatusCode)
 	for _, sc := range t.filterStatusCodes {
-		if strings.HasSuffix(sc, "xx") && sc[0] == statusCodeStr[0] && !strings.HasSuffix(statusCodeStr, "00"){
+		if strings.HasSuffix(sc, "xx") && sc[0] == statusCodeStr[0] && !strings.HasSuffix(statusCodeStr, "00") {
 			return
 		}
 
 		if sc == statusCodeStr {
+			return
+		}
+	}
+
+
+	for _, filterIp := range t.filterIPs {
+		if ip == strings.TrimSpace(filterIp) {
 			return
 		}
 	}
@@ -304,7 +330,7 @@ func (t tarantula) doRequest(domain, protocol, subdomain string, port int, retry
 		}
 
 		if t.withTechnology {
-			ctx, cancel := context.	WithTimeout(context.Background(), time.Second*1)
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second*1)
 			defer cancel()
 			technology := make(chan map[string]string, 1)
 

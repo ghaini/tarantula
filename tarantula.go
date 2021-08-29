@@ -283,12 +283,6 @@ func (t tarantula) doRequest(domain, protocol, subdomain string, port int, retry
 		}
 	}
 
-	for _, filterIp := range t.filterIPs {
-		if ip == strings.TrimSpace(filterIp) {
-			return
-		}
-	}
-
 	if _, exists := t.filterIPsMap[ip]; exists {
 		return
 	}

@@ -28,6 +28,7 @@ type tarantula struct {
 	withBody           bool
 	withTitle          bool
 	withTechnology     bool
+	withIP             bool
 	userAgents         []string
 	timeout            int
 	retry              int
@@ -116,6 +117,11 @@ func (t *tarantula) WithBody() *tarantula {
 
 func (t *tarantula) WithTitle() *tarantula {
 	t.withTitle = true
+	return t
+}
+
+func (t *tarantula) WithIP() *tarantula {
+	t.withIP = true
 	return t
 }
 
@@ -241,7 +247,7 @@ func (t tarantula) doRequest(domain, protocol, subdomain string, port int, retry
 
 	var ip string
 	portDetectorRegex := regexp.MustCompile(":.+$")
-	if len(t.filterIPsMap) > 0 {
+	if t.withIP || len(t.filterIPsMap) > 0 {
 		trace := &httptrace.ClientTrace{
 			GotConn: func(connInfo httptrace.GotConnInfo) {
 				ip = portDetectorRegex.ReplaceAllString(strings.TrimSpace(connInfo.Conn.RemoteAddr().String()), "")
@@ -364,6 +370,7 @@ func (t tarantula) doRequest(domain, protocol, subdomain string, port int, retry
 		Body:         body,
 		Headers:      headers,
 		Title:        title,
+		IP:           ip,
 		Technologies: technologies,
 	}
 }

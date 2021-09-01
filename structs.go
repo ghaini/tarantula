@@ -5,6 +5,7 @@ type Result struct {
 	Asset        string
 	Domain       string
 	Body         string
+	IP           string
 	Headers      map[string]string
 	Technologies map[string]string
 	Title        string

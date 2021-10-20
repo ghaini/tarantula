@@ -225,8 +225,9 @@ func (t tarantula) doRequest(domain, protocol, subdomain string, port int, retry
 
 	if port > 0 {
 		url += ":" + strconv.Itoa(port)
-		if protocol, ok := constants.PortsProtocols[port]; ok {
-			url = protocol + "://" + subdomain
+		if schema, ok := constants.PortsProtocols[port]; ok {
+			url = schema + "://" + subdomain
+			protocol = schema
 			canChangeProtocol = false
 		}
 	}
@@ -299,8 +300,11 @@ func (t tarantula) doRequest(domain, protocol, subdomain string, port int, retry
 	var responseWithRedirect *http.Response
 	if err == nil {
 		match, _ := regexp.MatchString("https?://"+subdomain, redirectedLocation.String())
-
 		if match {
+			redirectedUrl, _ := u.Parse(redirectedLocation.String())
+			if redirectedUrl.RequestURI() == "/" {
+				return
+			}
 			t.clientWithRedirect.Timeout = time.Duration(t.timeout) * time.Second
 			responseWithRedirect, err = t.clientWithRedirect.Do(req)
 			if err == nil {
